@@ -1,0 +1,32 @@
+function() {
+var nameField = document.querySelector('input#form-field-name');
+var name = nameField.value;
+ 
+// ATUALIZAÇÃO - PARA A EXECUÇÃO SE O CAMPO DO FORMULÁRIO FOR VAZIO
+if (!nameField || !nameField.value) {
+return "";
+}
+// Tratar o nome
+var cleanedName = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-ZÀ-ÿ ]/g, '');
+ 
+// Obter o primeiro nome
+var firstName = cleanedName.split(' ')[0];
+ 
+// Fazer uma requisição para a API Genderize.io para obter o gênero associado ao nome
+var xhr = new XMLHttpRequest();
+var url = "https://api.genderize.io?name=" + encodeURIComponent(firstName);
+xhr.open("GET", url, false);
+xhr.send();
+ 
+if (xhr.readyState === 4 && xhr.status === 200) {
+var response = JSON.parse(xhr.responseText);
+var gender = response.gender;
+if (gender === "male") {
+return "62c66a7a5dd70c3146618063c344e531e6d4b59e379808443ce962b3abd63c5a";
+} else if (gender === "female") {
+return "252f10c83610ebca1a059c0bae8255eba2f95be4d1d7bcfa89d7248a82d9f111";
+}
+}
+ 
+return ""; // Retornar vazio para gênero desconhecido ou não identificado
+}
