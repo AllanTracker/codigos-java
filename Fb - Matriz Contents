@@ -1,0 +1,23 @@
+function() {           // transforma matriz GA4 em matriz Contents do Facebook
+  var products = {{dlv - ecommerce.items}}; //matriz de produtos no padrão GA4
+  var tam = products.length
+  var indice=0
+  var viarray =[{"id":products[indice].item_id,
+                 "title":products[indice].item_name,
+                 "category":products[indice].item_category,
+                 "item_price":products[indice].price,
+                 "quantity":products[indice].quantity
+                }];
+  var tam=tam-1
+    while (tam !=0){
+       var indice=indice+1
+       viarray.push ({"id":products[indice].item_id,
+                      "title":products[indice].item_name,
+                      "category":products[indice].item_category,
+                      "item_price":products[indice].price,
+                      "quantity":products[indice].quantity
+                      });
+       var tam=tam-1
+                    }  
+  return viarray;
+}
