@@ -1,0 +1,32 @@
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    var form = document.querySelector('form[name="checkout"]');
+    if (form) { 
+      form.addEventListener('submit', function(e) {
+        
+        function getCookie(name) {
+          let cookies = document.cookie.split("; ");
+          for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].split("=");
+            if (cookie[0] === name) {
+              return cookie[1] || ''; 
+            }
+          }
+          return '';
+        }
+        var gaValue = getCookie("_ga");
+        var gaX5Value = getCookie("_ga_XXXXXXXXXX");
+        
+        if (gaValue && gaX5Value) {
+          var a = gaValue.substr(6);
+          var b = gaX5Value.substr(6);
+          var c = window.google_tag_data.glBridge.generate({_ga: a, _ga_XXXXXXXXX: b});
+          var d = document.getElementById("form-field-cross");
+          if (d) { 
+            d.value = c;
+          }
+        }
+      });
+    }
+  });
+</script>
