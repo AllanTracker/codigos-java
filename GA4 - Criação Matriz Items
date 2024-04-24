@@ -1,0 +1,9 @@
+function () {
+      var array = [{item_name: {{variável capturada}},      // utilize esse jsc para criar uma matriz de produtos GA4
+                    item_id: {{variável capturada}},                      
+                    price: {{variável capturada}},                             
+                    item_category: {{variável capturada}},                 
+                    quantity: {{variável capturada}}  
+                  ]};
+return array;
+}               
