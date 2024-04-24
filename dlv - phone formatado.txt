@@ -1,0 +1,13 @@
+function formatarNumeroTelefone() {
+  var phonenumber = {{dlv-phone}}; // Substitua pela variável da sua Camada de Dados
+
+  // Remove caracteres não numéricos e espaços
+  var numeroLimpo = phonenumber.replace(/\D/g, '');
+
+  // Adiciona o código do país 55 (Brasil) se necessário
+  if (!numeroLimpo.startsWith('55')) {
+    numeroLimpo = '55' + numeroLimpo;
+  }
+
+  return numeroLimpo;
+}

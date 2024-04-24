@@ -1,0 +1,14 @@
+function formatLastName() {
+  
+  // Substitua pela variável do seu formulário
+  var lastnameInput = document.querySelector('[id="lastname"]');
+  
+  // Verifica se lastnameInput não é nulo ou indefinido
+  if (lastnameInput) {
+    var lastnameValue = lastnameInput.value.toLowerCase(); // Converte para letras minúsculas
+  
+    return lastnameValue;
+  }
+
+  return undefined;
+}

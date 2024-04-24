@@ -1,0 +1,53 @@
+function formatState() {
+ 
+  // Mapeamento de estados e seus códigos
+  var estados = {
+    'Acre': 'ac',
+    'Alagoas': 'al',
+    'Amapá': 'ap',
+    'Amazonas': 'am',
+    'Bahia': 'ba',
+    'Ceará': 'ce',
+    'Distrito Federal': 'df',
+    'Espírito Santo': 'es',
+    'Goiás': 'go',
+    'Maranhão': 'ma',
+    'Mato Grosso': 'mt',
+    'Mato Grosso do Sul': 'ms',
+    'Minas Gerais': 'mg',
+    'Pará': 'pa',
+    'Paraíba': 'pb',
+    'Paraná': 'pr',
+    'Pernambuco': 'pe',
+    'Piauí': 'pi',
+    'Rio de Janeiro': 'rj',
+    'Rio Grande do Norte': 'rn',
+    'Rio Grande do Sul': 'rs',
+    'Rondônia': 'ro',
+    'Roraima': 'rr',
+    'Santa Catarina': 'sc',
+    'São Paulo': 'sp',
+    'Sergipe': 'se',
+    'Tocantins': 'to'
+  };
+
+  // Substitua pela variável do seu formulário
+  var campoEstado = document.querySelector('[id="state"]'); 
+  
+  // Remove espaços em branco no início e no fim
+  if (campoEstado) {
+    var estadoSelecionado = campoEstado.value;
+    var estadoFormatado = estadoSelecionado.trim().toLowerCase(); // Convertendo para letras minúsculas
+
+    // Verifica se o estado existe no mapeamento
+    if (estados[estadoFormatado]) {
+     
+      return estados[estadoFormatado];
+    } else {
+      return undefined;
+    }
+  } else {
+    return undefined;
+  }
+}
+

@@ -1,0 +1,20 @@
+function formatLastname() {
+
+  // Substitua pela variável do seu formulário
+  var nameField = document.querySelector('[id="fullname"]'); 
+  var name = nameField.value;
+
+  // Dividindo o nome em partes usando o espaço em branco para separar
+  var names = name.split(' ');
+
+  // Verificando se há mais de um nome
+  if (names.length > 1) {
+    // Retornando o último nome em letras minúsculas
+    var lastname = names[names.length - 1].toLowerCase();
+
+    return lastname;
+  } else {
+    // Se houver apenas um nome, retorne uma string vazia
+    return '';
+  }
+}

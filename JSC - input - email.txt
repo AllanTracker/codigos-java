@@ -1,0 +1,13 @@
+function formatEmail() {
+  
+  // Substitua pela variável do seu formulário
+  var emailInput = document.querySelector('[id="email"]'); 
+
+  // Converte para letras minúsculas
+  if (emailInput) {
+    var emailValue = emailInput.value.toLowerCase(); 
+
+    return emailValue;
+  }
+  return undefined;
+}

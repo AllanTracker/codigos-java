@@ -1,0 +1,15 @@
+function formatCity() {
+ 
+  // Substitua pela variável do seu formulário
+  var cityInput = document.querySelector('[id="city"]');
+  
+  // Verifica se cityInput é um objeto e não é nulo
+  if (typeof cityInput === 'object' && cityInput !== null) {
+    
+    // Converte para letras minúsculas e remove espaços
+    var cityValue = cityInput.value.toLowerCase().replace(/\s/g, '');
+
+    return cityValue;
+  }
+  return undefined;
+}

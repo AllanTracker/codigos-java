@@ -1,0 +1,24 @@
+function formatFirstName() {
+
+  // Substitua pela variável do seu formulário
+  var nameField = document.querySelector('[id="fullname"]'); 
+  var name = nameField.value;
+
+  // Convertendo o nome para letras minúsculas
+  name = name.toLowerCase();
+
+  // Dividindo o nome em partes usando o espaço em branco para separar
+  var names = name.split(' ');
+
+  // Verificando se há mais de um nome
+  if (names.length > 1) {
+    // Removendo o último nome
+    names.pop();
+  }
+
+  // Juntando os nomes novamente em uma única string
+  var result = names.join(' ');
+
+  return result;
+}
+

@@ -1,0 +1,23 @@
+function formatZipCode() {
+ 
+  // Substitua pela variável do seu formulário
+  var postcodeInput = document.querySelector('[id="zipcode"]');
+
+  if (postcodeInput) {
+    var postcodeValue = postcodeInput.value;
+
+    // Extrai os primeiros 5 caracteres numéricos
+    var zipcodeFormated = postcodeValue.match(/\d{5}/);
+
+    if (zipcodeFormated) {
+      
+      return zipcodeFormated[0];
+    } else {
+      
+      // Retorna uma string vazia se não encontrar números
+      return "";
+    }
+  }
+
+  return undefined;
+}

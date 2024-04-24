@@ -1,0 +1,20 @@
+function formatPhone() {
+  // Substitua pela variável do seu formulário
+  var phoneInput = document.querySelector('[id="phone"]');
+
+  if (phoneInput) {
+    var phoneValue = phoneInput.value;
+
+    // Remove caracteres não numéricos e espaços
+    var numeroLimpo = phoneValue.replace(/\D/g, '');
+
+    // Adiciona o código do país 55 (Brasil) se necessário
+    if (!numeroLimpo.startsWith('55')) {
+      numeroLimpo = '55' + numeroLimpo;
+    }
+
+    return numeroLimpo;
+  }
+
+  return undefined;
+}

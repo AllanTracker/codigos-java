@@ -1,0 +1,11 @@
+function() {
+
+  // Substitua pela variável da sua Camada de Dados
+  var dlvCity = {{dlv-city}}; 
+  if (typeof dlvCity === 'string') {
+    
+    // Converte para letras minúsculas e remove espaços
+    return dlvCity.toLowerCase().replace(/\s/g, '');
+  }
+  return undefined;
+}

@@ -1,0 +1,14 @@
+function formatFirstName() {
+  
+  // Substitua pela variável do seu formulário
+  var firstnameInput = document.querySelector('[id="firstname"]');
+  
+  // Verifica se firstnameInput não é nulo ou indefinido
+  if (firstnameInput) {
+    var firstnameValue = firstnameInput.value.toLowerCase(); // Converte para letras minúsculas
+  
+    return firstnameValue;
+  }
+
+  return undefined;
+}

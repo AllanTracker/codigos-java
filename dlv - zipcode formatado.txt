@@ -1,0 +1,18 @@
+function formatZipCode() {
+  // Substitua pela variável da sua Camada de Dados
+  var ZipCode = {{zipcode}};
+  
+  // Verifique se a variável está definida e não é nula
+  if (ZipCode) {
+    // Remova qualquer caractere não numérico
+    var cleanedZipcode = ZipCode.replace(/\D/g, '');
+
+    // Pegue os primeiros 5 dígitos do CEP
+    var firstFiveDigits = cleanedZipcode.substring(0, 5);
+
+    return firstFiveDigits;
+  } else {
+    return null; // Retorna nulo se a variável estiver vazia
+  }
+}
+
