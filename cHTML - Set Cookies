@@ -1,0 +1,14 @@
+<script>
+ (function(){
+ var cookieName = "seu_cookie"; // Nome do Cookie
+ var cookieValue = {{variável do Cookie}}; // Valor do Cookie
+ var expirationTime = 34560000; // Um ano em segundos
+ expirationTime = expirationTime * 1000;
+ var date = new Date(); 
+ var dateTimeNow = date.getTime(); 
+ 
+ date.setTime(dateTimeNow + expirationTime);
+ var date = date.toUTCString();
+ document.cookie = cookieName+"="+cookieValue+"; SameSite=None; Secure; expires="+date+"; path=/; domain=.seudominio.com.br";  
+})();
+</script>
