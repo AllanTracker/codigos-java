@@ -1,0 +1,6 @@
+RegEx firstname
+(.+)\s(.+)$         $1
+(.+)                $1
+
+RegEx lastname
+(.+)\s(.+)$         $2
