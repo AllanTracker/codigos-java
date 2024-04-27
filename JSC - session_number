@@ -1,0 +1,5 @@
+function() {
+  var ga = {{cookie - _ga_HZL9917P87}}; // Coloque aqui seu cookie de sessão
+  var parte = ga.split('.'); 
+  return +parte[3];
+}
