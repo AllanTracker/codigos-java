@@ -1,0 +1,6 @@
+function() {
+  var ga = {{cookie - _ga_HZL9917P87}}; // coloque aqui seu cookie de sessão
+  var parte = ga.split('.'); 
+  var tm = (+parte[5]+300)*1000000;  //somei 5 minutos ao timestamp atual e transformei em microsegundos
+return tm;
+}
