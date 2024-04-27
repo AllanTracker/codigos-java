@@ -1,0 +1,21 @@
+{
+  "client_id": "{{FT - (kw - webhook) client_id --> em=em}}",
+  "timestamp_micros": "{{FT - (kw - webhook) ga_timestamp --> em=em}}",
+  "events": [{"name": "purchase",
+              "params":{
+                    "session_id": "{{FT - (kw - webhook) session_id --> em=em}}",
+                    "page_location": "{{FT - (kw - webhook) page_location --> em=em}}",
+                    "session_number": "{{FT - (kw - webhook) session_number --> em=em}}",
+                    "items": [{"item_id": "{{ed - (kiwify) Product.product_id}}",
+                               "item_name": "{{ed - (kiwify) Product.product_name}}",
+                               "price": "{{regEx - (Kiwify) - value}}",
+                               "quantity": "1"
+                              }],
+                     "value": "{{regEx - (Kiwify) - value}}",
+                     "currency": "BRL",
+                     "transaction_id": "{{ed - (kiwify) order_id}}"
+ 
+                        }
+ 
+           }]
+}
