@@ -1,0 +1,6 @@
+function() {
+  var ga = {{cookie - _ga_LWVD82RR88}}; //Coloque aqui a variável com seu cookie de sessão
+  var parte = ga.split('.'); 
+  return +parte[2];
+}
+ 
