@@ -1,0 +1,6 @@
+function () {
+  if ({{dlv - visitorApiCity}}) { var el={{jsc - city (fb)}}}
+    else { var el = {{cookie - ct}}}
+  
+    return el;
+}
