@@ -1,0 +1,6 @@
+function () {
+  if ({{dlv - visitorApiRegion}}) { var el={{dlv - visitorApiRegion}}}
+    else { var el = {{cookie - st}}}
+  
+    return el;
+}
