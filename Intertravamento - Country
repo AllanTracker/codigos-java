@@ -1,0 +1,6 @@
+function () {
+  if ({{dlv - visitorApiCountryCode}}) { var el={{dlv - visitorApiCountryCode}}}
+    else { var el = {{cookie - cn}}}
+  
+    return el;
+}
