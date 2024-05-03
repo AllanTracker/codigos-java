@@ -1,0 +1,6 @@
+function() {
+  var currentDate = new Date();
+  var date = currentDate.toISOString().slice(0, 10);
+  var time = currentDate.toTimeString().slice(0, 8);
+  return date + ' ' + time;
+}
