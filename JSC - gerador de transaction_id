@@ -1,0 +1,7 @@
+function() {
+  // Gera um número aleatório
+  var randomNumber = Math.floor(Math.random() * 1000000000) + 1;
+  
+  // Retorna o número aleatório
+  return randomNumber;
+}
