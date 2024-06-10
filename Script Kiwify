@@ -1,0 +1,50 @@
+<script>
+    let prefix = ["https://pay.kiwify.com.br"];
+
+    // Gerar um novo número sck
+    let sckNumber = Math.floor(Math.random() * 9999999999) + 1;
+
+    // Remover qualquer parâmetro sck existente da URL
+    let url = new URL(window.location.href);
+    url.searchParams.delete("sck");
+
+    // Adicionar o novo número sck à URL
+    url.searchParams.set("sck", sckNumber);
+    history.replaceState(null, null, url);
+
+    // Função para obter os parâmetros de utm
+    function getUtmParams() {
+        let r = new URL(window.location.href);
+        let a = r.searchParams.get("utm_source"),
+            n = r.searchParams.get("utm_medium"),
+            o = r.searchParams.get("utm_campaign"),
+            m = r.searchParams.get("utm_term"),
+            c = r.searchParams.get("utm_content");
+        let utmParams = `utm_source=${a}&utm_medium=${n}&utm_campaign=${o}&utm_term=${m}&utm_content=${c}`;
+        return utmParams;
+    }
+
+    // Função principal para adicionar parâmetros à URL
+    function addParamsToURL() {
+        let utmParams = getUtmParams();
+        if (utmParams) {
+            document.querySelectorAll("a").forEach(function(e) {
+                for (let r = 0; r < prefix.length; r++) {
+                    if (-1 !== e.href.indexOf(prefix[r])) {
+                        if (-1 === e.href.indexOf("?")) {
+                            e.href += "?" + utmParams;
+                        } else {
+                            e.href += "&" + utmParams;
+                        }
+                        e.href += `&sck=${sckNumber}`;
+                    }
+                }
+            });
+        }
+    }
+
+    // Chamar a função principal
+    addParamsToURL();
+
+    console.log('%cScript de rastreamento de vendas desenvolvido pela Comunidade NOD - Dericson Calari e Samuel Choairy', 'font-size:20px;color:yellow;');
+</script>
