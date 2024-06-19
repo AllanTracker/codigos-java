@@ -28,7 +28,7 @@
  
     function updateLinks() {
         var t = new URLSearchParams(window.location.search);
-        var sck = getCookie("Leadsck");
+        var sck = getCookie("Leadsf");
  
         if (sck) {
             t.append("sck", sck);
