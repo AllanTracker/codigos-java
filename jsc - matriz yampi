@@ -1,0 +1,23 @@
+function() {           // transforma a matriz da Yampi no padrão GA4
+  var products = {{dlv - ecommerce.items}}; //matriz de produtos no padrão GA4
+  var tam = products.length
+  var indice=0
+  var viarray =[{"item_id":products[indice].shopify_product_id,
+                 "item_name":products[indice].product_option.product.name,
+                 "item_category":products[indice].short_description,
+                 "price":products[indice].product_option.price_discount,
+                 "quantity":products[indice].quantity
+                }];
+  var tam=tam-1
+    while (tam !=0){
+       var indice=indice+1
+       viarray.push ({"item_id":products[indice].shopify_product_id,
+                      "item_name":products[indice].product_option.product.name,
+                      "item_category":products[indice].short_description,
+                      "price":products[indice].product_option.price_discount,
+                      "quantity":products[indice].quantity
+                      });
+       var tam=tam-1
+                    }  
+  return viarray;
+}
