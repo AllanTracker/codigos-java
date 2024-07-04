@@ -28,7 +28,7 @@
  
     function updateLinks() {
         var t = new URLSearchParams(window.location.search);
-        var xcod = getCookie("Leadxcod");
+        var xcod = getCookie("Leadsf");
  
         if (xcod) {
             t.append("xcod", xcod);
