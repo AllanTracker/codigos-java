@@ -28,7 +28,7 @@
  
     function updateLinks() {
         var t = new URLSearchParams(window.location.search);
-        var src = getCookie("Leadsrc"); // substituído para src
+        var src = getCookie("Leadsf"); // substituído para src
  
         if (src) {
             t.append("src", src); // substituído para src
