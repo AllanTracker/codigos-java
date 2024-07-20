@@ -2,7 +2,7 @@
   
   (function() {
     var urlRedirecionamento = "https://wa.me/?text=Quero%20mais%20informa%C3%A7%C3%B5es"; //Link do whatsapp
-    var tempoRedirecionamento = 0; // Tempo em segundos até o redirecionamento
+    var tempoRedirecionamento = 0.5; // Tempo em segundos até o redirecionamento
 
     var parametros = ["utm_source"];
     var url = new URL(window.location.href);
