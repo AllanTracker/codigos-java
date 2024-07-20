@@ -1,0 +1,93 @@
+<script>
+  
+  (function() {
+    var urlRedirecionamento = "https://wa.me/?text=Quero%20mais%20informa%C3%A7%C3%B5es"; //Link do whatsapp
+    var tempoRedirecionamento = 0; // Tempo em segundos até o redirecionamento
+
+    var parametros = ["utm_source"];
+    var url = new URL(window.location.href);
+    var params = new URLSearchParams(url.search);
+
+    for (var key in params) {
+        if (params.hasOwnProperty(key) && parametros.indexOf(key) === -1) {
+            parametros.push(key);
+        }
+    }
+
+    var urlParamsCapt = new URLSearchParams(window.location.search);
+    var urlParamsCaptReferrer = new URLSearchParams(document.referrer.split('?')[1] || '');
+    var utms = {};
+
+    parametros.forEach(function(el) {
+        if (el === "utm_source") {
+            utms[el] = urlParamsCapt.get(el) || (document.referrer ? (urlParamsCaptReferrer.get(el) || new URL(document.referrer).hostname) : "direto");
+        } else {
+            utms[el] = urlParamsCapt.get(el) || (urlParamsCaptReferrer.get(el) || "");
+        }
+    });
+
+    var urlRedirecionamentoObj = new URL(urlRedirecionamento);
+    var whatsappURLPatterns = ["api.whatsapp.com", "wa.me", "web.whatsapp.com", "chat.whatsapp.com"];
+
+    if (isWhatsAppLink(urlRedirecionamento, whatsappURLPatterns)) {
+        // Extrai a mensagem de boas-vindas existente (se houver) e adiciona o protocolo de atendimento
+        var textParam = urlRedirecionamentoObj.searchParams.get('text');
+        var cookieID = getCookie('lead_whats');
+        textParam = textParam ? textParam + " Protocolo de atendimento: " + cookieID : "Protocolo de atendimento: " + cookieID;
+        urlRedirecionamentoObj.searchParams.set('text', textParam);
+    } else {
+        // Adiciona as UTMs à URL de redirecionamento se não for um link de WhatsApp
+        for (var key in utms) {
+            if (utms.hasOwnProperty(key) && utms[key] !== "") {
+                urlRedirecionamentoObj.searchParams.append(key, utms[key]);
+            }
+        }
+    }
+
+    // Executa o redirecionamento após o tempo especificado
+    setTimeout(function() {
+        window.location.href = urlRedirecionamentoObj.toString();
+    }, tempoRedirecionamento * 1000);
+
+    document.querySelectorAll('a').forEach(function(el) {
+        var elURL = new URL(el.href);
+
+        if (isWhatsAppLink(el.href, whatsappURLPatterns)) {
+            // Adiciona o protocolo de atendimento aos links de WhatsApp na página, mantendo textos existentes
+            var textParam = elURL.searchParams.get('text') || '';
+            var cookieID = getCookie('lead_whats');
+            textParam += (textParam ? " " : "") + "Protocolo de atendimento: " + cookieID;
+            elURL.searchParams.set('text', textParam);
+            el.href = elURL.toString();
+        } else {
+            var elSearchParams = new URLSearchParams(elURL.search);
+            var modified = false;
+            for (var key in utms) {
+                if (utms.hasOwnProperty(key) && !elSearchParams.has(key) && utms[key] !== "") {
+                    elSearchParams.append(key, utms[key]);
+                    modified = true;
+                }
+            }
+            if (modified) {
+                el.href = elURL.origin + elURL.pathname + "?" + elSearchParams.toString();
+            }
+        }
+    });
+
+    function isWhatsAppLink(href, patterns) {
+        return patterns.some(function(pattern) {
+            return href.indexOf(pattern) !== -1;
+        });
+    }
+
+    function getCookie(name) {
+        var value = "; " + document.cookie;
+        var parts = value.split("; " + name + "=");
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+})();
+
+console.log('%cScript rastreamento de WhatsApp - Comunidade NOD por Dericson Calari e Samuel Choairy', 'font-size:15px;color:blue;');
+
+</script>
