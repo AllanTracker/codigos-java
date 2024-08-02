@@ -1,0 +1,9 @@
+<script>
+  
+dataLayer.push(
+  {
+    "event": "generate_lead",
+    "email": {{input - email}}
+  });
+
+</script>
