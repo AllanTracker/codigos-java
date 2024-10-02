@@ -1,17 +1,41 @@
 <script>
-    let prefix = ["https://pay.kiwify.com.br"];
+    let prefix = ["https://pay.kirvano.com"];
 
     function getParams() {
         let t = "",
             e = window.top.location.href,
             r = new URL(e);
-        if (null != r) {
+
+        if (r) {
             let a = r.searchParams.get("utm_source"),
                 n = r.searchParams.get("utm_medium"),
                 o = r.searchParams.get("utm_campaign"),
-                p = r.searchParams.get("fbclid");
-            -1 !== e.indexOf("?") && (t = `&sck=${a}|${n}|${o}`);
-            console.log(t);
+                p = r.searchParams.get("fbclid"),
+                c = r.searchParams.get("utm_term"),
+                utm_content = getCookie("Leadsf"); // Obtém o valor do cookie "Leadsf"
+
+            // Verifica se o "utm_source" existe na URL
+            if (!a) {
+                // Se não existir, usa o referrer da página
+                let referrer = document.referrer;
+
+                if (referrer) {
+                    try {
+                        let hostname = new URL(referrer).hostname;
+                        a = getPlatformName(hostname); // Filtra o nome da plataforma
+                    } catch (error) {
+                        a = "direto"; // Se o referrer não for uma URL válida, define como "direto"
+                    }
+                } else {
+                    a = "direto"; // Se o referrer estiver vazio, define "utm_source" como "direto"
+                }
+            }
+
+            // Constrói a string de parâmetros incluindo o utm_source e o xcod atualizado
+            t = `utm_source=${a}&utm_content=${utm_content}`;
+            if (n || o || p || c) {
+                t += `&utm_medium=${n}&utm_campaign=${o}&utm_term=${c}&fbclid=${p}`;
+            }
         }
         return t;
     }
@@ -24,28 +48,35 @@
         return null;
     }
 
+    function getPlatformName(hostname) {
+        // Remover "www.", subdomínios de um único caractere e ".com", ".net", etc.
+        let domainParts = hostname.replace(/^www\./, '').split('.');
+        
+        // Se houver mais de 2 partes no hostname, provavelmente é um subdomínio
+        if (domainParts.length > 2) {
+            // Exemplo: l.instagram.com -> filtrar para pegar apenas instagram
+            domainParts = domainParts.slice(-2); // Pega os dois últimos elementos (domínio principal e TLD)
+        }
+
+        // Capitalizar o nome da plataforma
+        let name = domainParts[0];
+        return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
     function updateLinks() {
-        var t = new URLSearchParams(window.location.search);
-        var xcod = getCookie("Leadsf");
-
-        if (xcod) {
-            // Substitui utm_term por utm_content
-            t.append("utm_content", xcod);
-
-            t.toString() && document.querySelectorAll("a").forEach(function(e) {
+        let params = getParams();
+        if (params) {
+            document.querySelectorAll("a").forEach(function(e) {
                 for (let r = 0; r < prefix.length; r++) {
-                    if (-1 !== e.href.indexOf(prefix[r])) {
-                        if (-1 === e.href.indexOf("?")) {
-                            e.href += "?" + t.toString() + getParams();
+                    if (e.href.indexOf(prefix[r]) !== -1) {
+                        if (e.href.indexOf("?") === -1) {
+                            e.href += "?" + params;
                         } else {
-                            e.href += "&" + t.toString() + getParams();
+                            e.href += "&" + params;
                         }
                     }
                 }
             });
-        } else {
-            // Tenta novamente após 100ms se o cookie ainda não estiver presente
-            setTimeout(updateLinks, 100);
         }
     }
 
