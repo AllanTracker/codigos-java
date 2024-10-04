@@ -1,5 +1,5 @@
 <script>
-    let prefix = ["https://pay.kirvano.com"];
+    let prefix = ["https://chk.eduzz.com"];
 
     function getParams() {
         let t = "",
@@ -31,11 +31,14 @@
                 }
             }
 
-            // Constrói a string de parâmetros incluindo o utm_source e o xcod atualizado
-            t = `utm_source=${a}&utm_content=${utm_content}`;
-            if (n || o || p || c) {
-                t += `&utm_medium=${n}&utm_campaign=${o}&utm_term=${c}&fbclid=${p}`;
-            }
+            // Constrói a string de parâmetros, garantindo que utm_content sempre venha do cookie
+            t = `utm_source=${a}&utm_content=${utm_content}`; // utm_content sempre do cookie
+            
+            // Adiciona outros parâmetros apenas se eles existirem
+            if (n) t += `&utm_medium=${n}`;
+            if (o) t += `&utm_campaign=${o}`;
+            if (c) t += `&utm_term=${c}`;
+            if (p) t += `&fbclid=${p}`;
         }
         return t;
     }
@@ -69,10 +72,25 @@
             document.querySelectorAll("a").forEach(function(e) {
                 for (let r = 0; r < prefix.length; r++) {
                     if (e.href.indexOf(prefix[r]) !== -1) {
-                        if (e.href.indexOf("?") === -1) {
-                            e.href += "?" + params;
+                        // Adiciona os parâmetros à URL, garantindo que utm_content sempre venha do cookie
+                        const existingParams = new URL(e.href).searchParams;
+
+                        // Se o utm_content não existir na URL, adiciona
+                        if (!existingParams.has('utm_content')) {
+                            if (e.href.indexOf("?") === -1) {
+                                e.href += "?" + params;
+                            } else {
+                                e.href += "&" + params;
+                            }
                         } else {
-                            e.href += "&" + params;
+                            // Se já existir, mantemos o utm_content do cookie e adicionamos os outros parâmetros
+                            const updatedParams = `utm_source=${existingParams.get('utm_source') || a}&utm_content=${utm_content}`;
+                            if (n) updatedParams += `&utm_medium=${n}`;
+                            if (o) updatedParams += `&utm_campaign=${o}`;
+                            if (c) updatedParams += `&utm_term=${c}`;
+                            if (p) updatedParams += `&fbclid=${p}`;
+                            
+                            e.href += "&" + updatedParams;
                         }
                     }
                 }
