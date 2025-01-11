@@ -2,8 +2,7 @@
   
 dataLayer.push(
   {
-    "event": "begin_checkout",
-    "Leadsf": 
+    "event": "begin_checkout"
   });
 
 </script>
