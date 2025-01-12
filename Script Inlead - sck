@@ -1,0 +1,142 @@
+<script>
+(function() {
+    const paymentUrls = ["https://pay.kiwify.com.br"];
+
+    // Função para pegar os parâmetros da URL
+    function getUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        const utmParams = {};
+
+        // Adiciona todos os parâmetros UTM à variável
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(key => {
+            if (params.has(key)) {
+                utmParams[key] = params.get(key);
+            }
+        });
+
+        // Verifica e sincroniza o cookie e o localStorage para sck
+        let sck = getCookie("Leadsf");
+        let localStorageValue = localStorage.getItem("Leadsf");
+        const domain = window.location.hostname.includes('www.') ? window.location.hostname.slice(4) : window.location.hostname;
+        const cookieDomain = `.${domain}`;
+        const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString(); // 1 ano de expiração
+
+        if (sck && !localStorageValue) {
+            localStorage.setItem("Leadsf", sck);
+        } else if (!sck && localStorageValue) {
+            document.cookie = `Leadsf=${localStorageValue}; path=/; domain=${cookieDomain}; expires=${expires};`;
+            sck = localStorageValue;
+        } else if (!sck && !localStorageValue) {
+            sck = generateTimestamp();
+            document.cookie = `Leadsf=${sck}; path=/; domain=${cookieDomain}; expires=${expires};`;
+            localStorage.setItem("Leadsf", sck);
+        }
+
+        // Se sck não está na URL ou é diferente do Leadsf, usa Leadsf
+        if (!params.has('sck') || params.get('sck') !== sck) {
+            utmParams['sck'] = sck;
+        }
+
+        return utmParams;
+    }
+
+    // Função para gerar um timestamp
+    function generateTimestamp() {
+        return new Date().getTime();
+    }
+
+    // Função para obter o valor de um cookie
+    function getCookie(name) {
+        let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : null;
+    }
+
+    // Função para salvar todos os parâmetros UTM no localStorage
+    function saveUtmParams() {
+        const utmParams = getUrlParams();
+        
+        // Se houver parâmetros UTM, armazená-los no localStorage
+        if (Object.keys(utmParams).length > 0) {
+            const savedUtmParams = getSavedUtmParams();
+            // Mescla os parâmetros UTM novos com os existentes no localStorage
+            const updatedUtmParams = { ...savedUtmParams, ...utmParams };
+            localStorage.setItem('utm_params', JSON.stringify(updatedUtmParams));
+        }
+    }
+
+    // Função para recuperar UTMs do localStorage
+    function getSavedUtmParams() {
+        const utmParams = localStorage.getItem('utm_params');
+        return utmParams ? JSON.parse(utmParams) : {};
+    }
+
+    // Função para adicionar UTMs aos links internos do site, apenas se houver UTMs
+    function appendUtmToLinks() {
+        const utmParams = getSavedUtmParams();
+        
+        // Se houver UTMs no localStorage, adicioná-las aos links internos
+        if (Object.keys(utmParams).length > 0) {
+            const links = document.querySelectorAll('a[href^="/"]'); // Seleciona links internos
+            
+            links.forEach(link => {
+                const url = new URL(link.href, window.location.origin);
+                
+                // Adiciona os parâmetros UTM à URL
+                addUtmParamsToUrl(url, utmParams);
+                
+                // Atualiza o link com a nova URL
+                link.href = url.href;
+            });
+        }
+
+        // Adiciona UTMs à URL dos botões de pagamento
+        addUtmToPaymentButtons(utmParams);
+    }
+
+    // Função para adicionar UTMs à URL dos botões de pagamento
+    function addUtmToPaymentButtons(utmParams) {
+        const paymentButtons = document.querySelectorAll(paymentUrls.map(url => `a[href^="${url}"]`).join(', '));
+        
+        paymentButtons.forEach(button => {
+            const url = new URL(button.href);
+            
+            // Adiciona os parâmetros UTM à URL
+            addUtmParamsToUrl(url, utmParams);
+
+            // Atualiza o link do botão com a nova URL
+            button.href = url.href;
+        });
+    }
+
+    // Função para adicionar parâmetros UTM à URL na ordem desejada
+    function addUtmParamsToUrl(url, utmParams) {
+        // Define a ordem desejada
+        const orderedKeys = ['sck', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+        
+        orderedKeys.forEach(key => {
+            if (utmParams[key]) {
+                url.searchParams.set(key, utmParams[key]);
+            }
+        });
+    }
+
+    // Função para atualizar a URL da página atual com todos os parâmetros UTM, incluindo sck
+    function appendUtmToCurrentPage() {
+        const utmParams = getSavedUtmParams();
+        const url = new URL(window.location.href);
+
+        // Substitui ou adiciona todos os parâmetros UTM na ordem desejada
+        addUtmParamsToUrl(url, utmParams);
+
+        // Atualiza a URL sem recarregar a página
+        window.history.replaceState({}, '', url.href);
+    }
+
+    // Executa ao carregar a página
+    window.addEventListener('load', function() {
+        saveUtmParams(); // Salva as UTMs da página inicial no localStorage
+        appendUtmToLinks(); // Adiciona as UTMs aos links internos e aos botões de pagamento
+        appendUtmToCurrentPage(); // Atualiza a URL da página atual com todos os parâmetros UTM
+    });
+})();
+</script>
