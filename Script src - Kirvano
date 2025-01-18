@@ -1,0 +1,90 @@
+<script>
+    let prefix = ["https://pay.kirvano.com"];
+
+    function getParams() {
+        let t = "",
+            e = window.top.location.href,
+            r = new URL(e);
+
+        if (r) {
+            let a = r.searchParams.get("utm_source"),
+                n = r.searchParams.get("utm_medium"),
+                o = r.searchParams.get("utm_campaign"),
+                p = r.searchParams.get("fbclid"),
+                c = r.searchParams.get("utm_term"),
+                d = r.searchParams.get("utm_content"),
+                src = getCookie("Leadsf");
+
+            let sessionStorageValue = sessionStorage.getItem("Leadsf");
+            if (src && !sessionStorageValue) {
+                sessionStorage.setItem("Leadsf", src);
+            } else if (!src && sessionStorageValue) {
+                document.cookie = `Leadsf=${sessionStorageValue}; path=/; domain=${window.location.hostname}; expires=${new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString()};`;
+                src = sessionStorageValue;
+            } else if (!src && !sessionStorageValue) {
+                src = generateTimestamp();
+                document.cookie = `Leadsf=${src}; path=/; domain=${window.location.hostname}; expires=${new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString()};`;
+                sessionStorage.setItem("Leadsf", src);
+            }
+
+            if (!a) {
+                let referrer = document.referrer;
+                if (referrer) {
+                    try {
+                        let hostname = new URL(referrer).hostname;
+                        a = getPlatformName(hostname);
+                    } catch (error) {
+                        a = "direto";
+                    }
+                } else {
+                    a = "direto";
+                }
+            }
+
+            t = `src=${src}`;
+            t += `&utm_source=${a}`;
+            if (n) t += `&utm_medium=${n}`;
+            if (o) t += `&utm_campaign=${o}`;
+            if (c) t += `&utm_term=${c}`;
+            if (d) t += `&utm_content=${d}`;
+            if (p) t += `&fbclid=${p}`;
+
+            updateLinks(t);
+        }
+    }
+
+    function generateTimestamp() {
+        return new Date().getTime();
+    }
+
+    function getCookie(name) {
+        let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : null;
+    }
+
+    function getPlatformName(hostname) {
+        let domainParts = hostname.replace(/^www\./, '').split('.');
+        if (domainParts.length > 2) {
+            domainParts = domainParts.slice(-2);
+        }
+        let name = domainParts[0];
+        return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    function updateLinks(params) {
+        document.querySelectorAll("a").forEach(function(e) {
+            for (let r = 0; r < prefix.length; r++) {
+                if (e.href.indexOf(prefix[r]) !== -1) {
+                    const existingParams = new URL(e.href).searchParams;
+                    if (!existingParams.has('src')) {
+                        e.href += e.href.indexOf("?") === -1 ? "?" + params : "&" + params;
+                    }
+                }
+            }
+        });
+    }
+
+    window.addEventListener('load', function() {
+        getParams();
+    });
+</script>
