@@ -1,0 +1,88 @@
+<script>
+(function () {
+    // Função para obter o valor de um parâmetro da URL
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+    // Função para definir um cookie com domínio
+    function setCookie(cookieName, cookieValue, expirationTime) {
+        var cookiePath = "/";
+        expirationTime = expirationTime * 1000; // Converter tempo de expiração para milissegundos
+        var date = new Date();
+        date.setTime(date.getTime() + expirationTime); // Incrementar tempo de expiração
+        var expirationDate = date.toUTCString();
+        var domain = ".mentoriaoretorno.com.br";
+        document.cookie = cookieName + "=" + cookieValue + "; expires=" + expirationDate + "; path=" + cookiePath + "; domain=" + domain;
+    }
+
+    // Função para obter o valor de um cookie pelo nome
+    function getCookieValue(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    // Função para gerar um identificador único com timestamp atualizado
+    function generateUniqueTimestamp() {
+        var now = new Date().getTime(); // Timestamp atual em milissegundos
+        var randomPart = Math.floor(Math.random() * 10000); // Número aleatório entre 0 e 9999
+        return (now + randomPart).toString(); // Combinar timestamp com número aleatório
+    }
+
+    // Definir o nome do cookie e eventId
+    var cookieName = "index";
+    var eventId = getCookieValue(cookieName);
+
+    // Se não estiver no cookie, tentar obter do localStorage
+    if (!eventId) {
+        eventId = localStorage.getItem(cookieName);
+    }
+
+    // Se ainda não estiver disponível, gerar um identificador único
+    if (!eventId || eventId === '') {
+        eventId = generateUniqueTimestamp(); // Gerar identificador único com valor diferente
+    }
+
+    // Armazenar eventId no cookie, localStorage e sessionStorage
+    var expirationTime = 34560000; // Um ano em segundos
+    setCookie(cookieName, eventId, expirationTime);
+    localStorage.setItem(cookieName, eventId);
+    sessionStorage.setItem(cookieName, eventId);
+
+    // **Início do código adicionado para salvar a data de entrada**
+
+    // Definir o nome do cookie e data de entrada
+    var dateCookieName = "entry_date";
+    var entryDate = getCookieValue(dateCookieName);
+
+    // Se não estiver no cookie, tentar obter do localStorage
+    if (!entryDate) {
+        entryDate = localStorage.getItem(dateCookieName);
+    }
+
+    // Se ainda não estiver disponível, gerar um identificador único para a data de entrada
+    if (!entryDate || entryDate === '') {
+        entryDate = generateUniqueTimestamp(); // Identificador único para a data de entrada
+
+        // Armazenar entryDate no cookie, localStorage e sessionStorage
+        var dateExpirationTime = 34560000; // Um ano em segundos
+        setCookie(dateCookieName, entryDate, dateExpirationTime);
+        localStorage.setItem(dateCookieName, entryDate);
+        sessionStorage.setItem(dateCookieName, entryDate);
+    }
+
+    // O restante do código permanece o mesmo
+})();
+</script>
