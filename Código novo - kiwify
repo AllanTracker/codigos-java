@@ -46,7 +46,7 @@
 
     // Se ainda não estiver disponível, usar valor padrão (modificado para só usar o cookie)
     if (!sck || sck === '') {
-        sck = "{{event_id}}"; // Variável GTM substituída
+        sck = {{event_id}}; // Variável GTM substituída
     }
 
     // Armazenar o sck no cookie, localStorage e sessionStorage
