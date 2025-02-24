@@ -1,0 +1,14 @@
+function() {
+    var item = {{dlv - items}}; // Captura o primeiro item da matriz "items"
+    
+    if (!item || typeof item !== "object") {
+        return [];
+    }
+
+    return [{
+        "id": item.item_id,
+        "title": item.item_name, // Inclui o nome do item
+        "quantity": item.quantity || 1,  // Define 1 caso quantity seja 0 ou indefinido
+        "item_price": item.price ? parseFloat(item.price) : 0
+    }];
+}
