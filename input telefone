@@ -1,0 +1,6 @@
+function() {
+ var el = document.querySelector('[id="form-field-phone"]').value;
+
+ return el;
+
+}
