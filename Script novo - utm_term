@@ -30,7 +30,7 @@
 
     var cookieName = "index";
     var eventId = getCookieValue(cookieName) || localStorage.getItem(cookieName) || new Date().getTime().toString();
-    
+
     setCookie(cookieName, eventId, 34560000);
     localStorage.setItem(cookieName, eventId);
     sessionStorage.setItem(cookieName, eventId);
@@ -52,9 +52,12 @@
         for (var i = 0; i < utmParams.length; i++) {
             var param = utmParams[i];
             var value = getParameterByName(param);
-            if (!value && param === 'utm_term') {
-                value = eventId; // Garante que utm_term seja sempre o index
+
+            // Sobrescreve o utm_term com eventId, independentemente do valor encontrado
+            if (param === 'utm_term') {
+                value = eventId;
             }
+
             if (value) {
                 var cookieNameUtm = 'cookie' + param.charAt(0).toUpperCase() + param.slice(1);
                 setCookie(cookieNameUtm, value, 63072000);
@@ -68,14 +71,16 @@
         a.href = document.referrer;
         return a.hostname;
     })() : "direto";
-    
+
     var paramsList = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
     for (var j = 0; j < paramsList.length; j++) {
         var param = paramsList[j];
-        utms[param] = getParameterByName(param) || getCookieValue('cookie' + param.charAt(0).toUpperCase() + param.slice(1)) || (param === "utm_source" ? referrerHost : "");
+        if (param === 'utm_term') {
+            utms[param] = eventId; // Sobrescreve sempre com eventId
+        } else {
+            utms[param] = getParameterByName(param) || getCookieValue('cookie' + param.charAt(0).toUpperCase() + param.slice(1)) || (param === "utm_source" ? referrerHost : "");
+        }
     }
-
-    utms['utm_term'] = eventId; // Garante que utm_term sempre seja o index
 
     var currentParams = new URLSearchParams(window.location.search);
     var modified = false;
