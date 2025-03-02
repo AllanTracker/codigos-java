@@ -1,0 +1,139 @@
+<script>
+(function () {
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+    function setCookie(name, value, expirationTime) {
+        var date = new Date();
+        date.setTime(date.getTime() + expirationTime * 1000);
+        var expires = "; expires=" + date.toUTCString();
+        var domain = ".seudominioaqui.com.br";
+        document.cookie = name + "=" + value + expires + "; path=/; domain=" + domain;
+    }
+
+    function getCookieValue(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i].trim();
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+        }
+        return null;
+    }
+
+    // Define o `index` baseado no parâmetro `src`
+    var cookieName = "index";
+    var srcValue = getParameterByName("src");
+    var eventId = srcValue || getCookieValue(cookieName) || localStorage.getItem(cookieName) || new Date().getTime().toString();
+
+    // Armazena o `index` em cookies e storage
+    setCookie(cookieName, eventId, 34560000);
+    localStorage.setItem(cookieName, eventId);
+    sessionStorage.setItem(cookieName, eventId);
+
+    var dateCookieName = "entry_date";
+    var entryDate = getCookieValue(dateCookieName) || localStorage.getItem(dateCookieName) || new Date().getTime().toString();
+
+    setCookie(dateCookieName, entryDate, 34560000);
+    localStorage.setItem(dateCookieName, entryDate);
+    sessionStorage.setItem(dateCookieName, entryDate);
+
+    var adParams = ['fbclid', 'gclid'];
+    var isAdClick = adParams.some(function(param) {
+        return getParameterByName(param);
+    });
+
+    if (isAdClick) {
+        var utmParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+        for (var i = 0; i < utmParams.length; i++) {
+            var param = utmParams[i];
+            var value = getParameterByName(param);
+
+            // Não sobrescreve o utm_term com eventId
+            if (param === 'utm_term') {
+                continue;
+            }
+
+            if (value) {
+                var cookieNameUtm = 'cookie' + param.charAt(0).toUpperCase() + param.slice(1);
+                setCookie(cookieNameUtm, value, 63072000);
+            }
+        }
+    }
+
+    var utms = {};
+    var referrerHost = document.referrer ? (function() {
+        var a = document.createElement('a');
+        a.href = document.referrer;
+        return a.hostname;
+    })() : "direto";
+
+    var paramsList = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'src'];
+    for (var j = 0; j < paramsList.length; j++) {
+        var param = paramsList[j];
+        if (param === 'src') {
+            utms[param] = srcValue || eventId; // Prioriza o `src`
+        } else {
+            utms[param] = getParameterByName(param) || getCookieValue('cookie' + param.charAt(0).toUpperCase() + param.slice(1)) || (param === "utm_source" ? referrerHost : "");
+        }
+    }
+
+    var currentParams = new URLSearchParams(window.location.search);
+    var modified = false;
+
+    for (var key in utms) {
+        if (utms.hasOwnProperty(key) && utms[key] && !currentParams.has(key)) {
+            currentParams.set(key, utms[key]);
+            modified = true;
+        }
+    }
+
+    if (modified) {
+        var newURL = window.location.origin + window.location.pathname + '?' + currentParams.toString() + window.location.hash;
+        window.history.replaceState(null, null, newURL);
+    }
+
+    function updateElementHref(el, href) {
+        try {
+            var elURL = new URL(href, window.location.origin);
+            var elParams = new URLSearchParams(elURL.search);
+            var modifiedEl = false;
+
+            for (var key in utms) {
+                if (utms.hasOwnProperty(key) && utms[key] && !elParams.has(key)) {
+                    elParams.set(key, utms[key]);
+                    modifiedEl = true;
+                }
+            }
+
+            if (modifiedEl) {
+                elURL.search = elParams.toString();
+                return elURL.toString();
+            }
+            return href;
+        } catch (e) {
+            console.warn('Erro ao processar URL:', href);
+            return href;
+        }
+    }
+
+    // Atualizar links e iframes
+    var elements = document.querySelectorAll('a[href], iframe[src]');
+    for (var k = 0; k < elements.length; k++) {
+        var el = elements[k];
+        if (el.tagName === "A") {
+            el.href = updateElementHref(el, el.href);
+        }
+        if (el.tagName === "IFRAME") {
+            el.src = updateElementHref(el, el.src);
+        }
+    }
+})();
+</script>
