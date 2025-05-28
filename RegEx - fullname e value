@@ -4,3 +4,6 @@ RegEx firstname
 
 RegEx lastname
 (.+)\s(.+)$         $2
+
+RegEx value
+(\d+)(\d{2})$     $1.$2
