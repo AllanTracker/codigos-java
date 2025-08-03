@@ -1,5 +1,6 @@
 <script>
 (function () {
+    // Função para obter o valor de um parâmetro da URL
     function getParameterByName(name, url) {
         if (!url) url = window.location.href;
         name = name.replace(/[\[\]]/g, "\\$&");
@@ -10,14 +11,19 @@
         return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
-    function setCookie(name, value, expirationTime) {
+    // Função para definir um cookie com domínio
+    function setCookie(cookieName, cookieValue, expirationTime) {
+        var cookiePath = "/";
+        expirationTime = expirationTime * 1000; // Converter tempo de expiração para milissegundos
         var date = new Date();
-        date.setTime(date.getTime() + expirationTime * 1000);
-        var expires = "; expires=" + date.toUTCString();
-        var domain = ".seudominioaqui.com.br";
-        document.cookie = name + "=" + value + expires + "; path=/; domain=" + domain;
+        var now = date.getTime();
+        date.setTime(now + expirationTime);
+        var expires = date.toUTCString();
+        var domain = ".seudominio.com";
+        document.cookie = cookieName + "=" + cookieValue + "; expires=" + expires + "; path=" + cookiePath + "; domain=" + domain;
     }
 
+    // Função para obter o valor de um cookie pelo nome
     function getCookieValue(name) {
         var nameEQ = name + "=";
         var ca = document.cookie.split(';');
@@ -28,109 +34,151 @@
         return null;
     }
 
-    var cookieName = "index";
-    var eventId = getCookieValue(cookieName) || localStorage.getItem(cookieName) || new Date().getTime().toString();
-
-    setCookie(cookieName, eventId, 34560000);
-    localStorage.setItem(cookieName, eventId);
-    sessionStorage.setItem(cookieName, eventId);
-
-    var dateCookieName = "entry_date";
-    var entryDate = getCookieValue(dateCookieName) || localStorage.getItem(dateCookieName) || new Date().getTime().toString();
-
-    setCookie(dateCookieName, entryDate, 34560000);
-    localStorage.setItem(dateCookieName, entryDate);
-    sessionStorage.setItem(dateCookieName, entryDate);
-
-    var adParams = ['fbclid', 'gclid'];
-    var isAdClick = adParams.some(function(param) {
-        return getParameterByName(param);
-    });
-
-    if (isAdClick) {
-        var utmParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
-        for (var i = 0; i < utmParams.length; i++) {
-            var param = utmParams[i];
-            var value = getParameterByName(param);
-
-            // Sobrescreve o utm_term com eventId, independentemente do valor encontrado
-            if (param === 'utm_term') {
-                value = eventId;
-            }
-
-            if (value) {
-                var cookieNameUtm = 'cookie' + param.charAt(0).toUpperCase() + param.slice(1);
-                setCookie(cookieNameUtm, value, 63072000);
-            }
-        }
-    }
-
-    var utms = {};
-    var referrerHost = document.referrer ? (function() {
+    // Função para obter host do referrer
+    function getReferrerHost() {
         var a = document.createElement('a');
         a.href = document.referrer;
         return a.hostname;
-    })() : "direto";
+    }
 
-    var paramsList = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
-    for (var j = 0; j < paramsList.length; j++) {
-        var param = paramsList[j];
-        if (param === 'utm_term') {
-            utms[param] = eventId; // Sobrescreve sempre com eventId
-        } else {
-            utms[param] = getParameterByName(param) || getCookieValue('cookie' + param.charAt(0).toUpperCase() + param.slice(1)) || (param === "utm_source" ? referrerHost : "");
+    // Definir nome do cookie index e obter valor
+    var cookieName = "index";
+    var indexValue = getCookieValue(cookieName);
+
+    // fallback para localStorage
+    if (!indexValue) {
+        indexValue = localStorage.getItem(cookieName);
+    }
+
+    // valor padrão via GTM
+    if (!indexValue || indexValue === '') {
+        indexValue = {{event_id}};
+    }
+
+    // Armazenar index em cookie/storage
+    var expiration = 34560000; // um ano em segundos
+    setCookie(cookieName, indexValue, expiration);
+    localStorage.setItem(cookieName, indexValue);
+    sessionStorage.setItem(cookieName, indexValue);
+
+    // Salvar data de entrada
+    var dateCookie = "entry_date";
+    var entryDate = getCookieValue(dateCookie);
+    if (!entryDate) {
+        entryDate = new Date().getTime().toString();
+        setCookie(dateCookie, entryDate, expiration);
+        localStorage.setItem(dateCookie, entryDate);
+        sessionStorage.setItem(dateCookie, entryDate);
+    }
+
+    // Parâmetros de anúncio
+    var adParams = ['fbclid', 'gclid'];
+    var isAd = false;
+    for (var i = 0; i < adParams.length; i++) {
+        if (getParameterByName(adParams[i])) {
+            isAd = true;
+            break;
         }
     }
 
-    var currentParams = new URLSearchParams(window.location.search);
-    var modified = false;
+    // Capturar UTMs com fallback de referrer para utm_source
+    var utmSource = getParameterByName('utm_source') || (document.referrer ? (getParameterByName('utm_source', document.referrer) || getReferrerHost()) : 'direto');
+    var utmMedium = getParameterByName('utm_medium');
+    var utmCampaign = getParameterByName('utm_campaign');
+    var utmContent = getParameterByName('utm_content');
+    var utmTerm = getParameterByName('utm_term');
 
-    for (var key in utms) {
-        if (utms.hasOwnProperty(key) && utms[key] && !currentParams.has(key)) {
-            currentParams.set(key, utms[key]);
-            modified = true;
-        }
+    // Gravar UTMs em cookies (exceto orgânico)
+    if ((isAd || utmSource) && utmSource.toLowerCase() !== 'organico') {
+        if (utmSource) setCookie('cookieUtmSource', utmSource, expiration * 2);
+        if (utmMedium) setCookie('cookieUtmMedium', utmMedium, expiration * 2);
+        if (utmCampaign) setCookie('cookieUtmCampaign', utmCampaign, expiration * 2);
+        if (utmContent) setCookie('cookieUtmContent', utmContent, expiration * 2);
+        if (utmTerm) setCookie('cookieUtmTerm', utmTerm, expiration * 2);
     }
 
+    // Parametros atuais da URL
+    var currentSearch = window.location.search.substring(1);
+    var paramsObj = {};
+    if (currentSearch) {
+        currentSearch.split('&').forEach(function(pair) {
+            var p = pair.split('=');
+            if (p.length === 2) paramsObj[decodeURIComponent(p[0])] = decodeURIComponent(p[1]);
+        });
+    }
+
+    // Adicionar utm_term com index
+    if (!paramsObj.utm_term) {
+        paramsObj.utm_term = indexValue;
+    }
+
+    // Adicionar utm_content com valores dos cookies UTM
+    if (!paramsObj.utm_content) {
+        var contArr = [];
+        ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
+            var v = getCookieValue(c);
+            if (v) contArr.push(v);
+        });
+        if (contArr.length) paramsObj.utm_content = contArr.join('|');
+    }
+
+    // Reconstruir querystring se houve modificação
+    var modified = !window.location.search.includes('utm_term') || !window.location.search.includes('utm_content') || !window.location.search.includes('utm_source');
     if (modified) {
-        var newURL = window.location.origin + window.location.pathname + '?' + currentParams.toString() + window.location.hash;
-        window.history.replaceState(null, null, newURL);
-    }
-
-    function updateElementHref(el, href) {
-        try {
-            var elURL = new URL(href, window.location.origin);
-            var elParams = new URLSearchParams(elURL.search);
-            var modifiedEl = false;
-
-            for (var key in utms) {
-                if (utms.hasOwnProperty(key) && utms[key] && !elParams.has(key)) {
-                    elParams.set(key, utms[key]);
-                    modifiedEl = true;
-                }
-            }
-
-            if (modifiedEl) {
-                elURL.search = elParams.toString();
-                return elURL.toString();
-            }
-            return href;
-        } catch (e) {
-            console.warn('Erro ao processar URL:', href);
-            return href;
+        var newQ = '?';
+        var first = true;
+        for (var k in paramsObj) {
+            if (first) first = false;
+            else newQ += '&';
+            newQ += encodeURIComponent(k) + '=' + encodeURIComponent(paramsObj[k]);
         }
+        // garantir utm_source na URL
+        if (!newQ.includes('utm_source=')) {
+            newQ += (first ? '' : '&') + 'utm_source=' + encodeURIComponent(utmSource);
+        }
+        var newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + newQ + window.location.hash;
+        window.history.replaceState(null, null, newUrl);
     }
 
     // Atualizar links e iframes
-    var elements = document.querySelectorAll('a[href], iframe[src]');
-    for (var k = 0; k < elements.length; k++) {
-        var el = elements[k];
-        if (el.tagName === "A") {
-            el.href = updateElementHref(el, el.href);
-        }
-        if (el.tagName === "IFRAME") {
-            el.src = updateElementHref(el, el.src);
-        }
+    function updateHref(el, href) {
+        try {
+            var a = document.createElement('a');
+            a.href = href;
+            var search = a.search.substring(1).split('&').reduce(function(acc, pair) {
+                var p = pair.split('=');
+                if (p.length === 2) acc[p[0]] = p[1]; return acc;
+            }, {});
+            var changed = false;
+            if (!search.utm_term) { search.utm_term = indexValue; changed = true; }
+            if (!search.utm_content) {
+                var cv = [];
+                ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
+                    var v = getCookieValue(c); if (v) cv.push(v);
+                });
+                if (cv.length) { search.utm_content = cv.join('|'); changed = true; }
+            }
+            if (!search.utm_source) { search.utm_source = utmSource; changed = true; }
+            if (changed) {
+                var s = '?'; var f = true;
+                for (var key in search) {
+                    if (!f) s += '&'; else f = false;
+                    s += key + '=' + search[key];
+                }
+                return a.protocol + '//' + a.host + a.pathname + s + a.hash;
+            }
+        } catch(e){}
+        return href;
+    }
+
+    var links = document.getElementsByTagName('a');
+    for (var j = 0; j < links.length; j++) {
+        links[j].href = updateHref(links[j], links[j].href);
+    }
+    var iframes = document.getElementsByTagName('iframe');
+    for (var j = 0; j < iframes.length; j++) {
+        var srcAtt = iframes[j].getAttribute('data-src') || iframes[j].src;
+        iframes[j].setAttribute('data-src', updateHref(iframes[j], srcAtt));
     }
 })();
 </script>
