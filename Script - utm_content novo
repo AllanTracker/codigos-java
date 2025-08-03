@@ -3,7 +3,7 @@
     // Função para obter o valor de um parâmetro da URL
     function getParameterByName(name, url) {
         if (!url) url = window.location.href;
-        name = name.replace(/\[\]|\\$&/g, "\\$&");
+        name = name.replace(/[\[\]]/g, "\\$&");
         var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
             results = regex.exec(url);
         if (!results) return null;
@@ -19,7 +19,7 @@
         var now = date.getTime();
         date.setTime(now + expirationTime);
         var expires = date.toUTCString();
-        var domain = ".seudominioaqui";
+        var domain = ".seudominio.com";
         document.cookie = cookieName + "=" + cookieValue + "; expires=" + expires + "; path=" + cookiePath + "; domain=" + domain;
     }
 
@@ -32,6 +32,13 @@
             if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
         }
         return null;
+    }
+
+    // Função para obter host do referrer
+    function getReferrerHost() {
+        var a = document.createElement('a');
+        a.href = document.referrer;
+        return a.hostname;
     }
 
     // Definir nome do cookie index e obter valor
@@ -74,20 +81,21 @@
         }
     }
 
-    // Capturar UTMs
-    var utmSource = getParameterByName('utm_source');
+    // Capturar UTMs com fallback de referrer para utm_source
+    var utmSource = getParameterByName('utm_source')
+        || (document.referrer ? (getParameterByName('utm_source', document.referrer) || getReferrerHost()) : 'direto');
     var utmMedium = getParameterByName('utm_medium');
     var utmCampaign = getParameterByName('utm_campaign');
     var utmContent = getParameterByName('utm_content');
     var utmTerm = getParameterByName('utm_term');
 
     // Gravar UTMs em cookies (exceto orgânico)
-    if ((isAd || utmSource) && utmSource && utmSource.toLowerCase() !== 'organico') {
-        if (utmSource) setCookie('cookieUtmSource', utmSource, expiration * 2);
-        if (utmMedium) setCookie('cookieUtmMedium', utmMedium, expiration * 2);
+    if ((isAd || utmSource) && utmSource.toLowerCase() !== 'organico') {
+        if (utmSource)   setCookie('cookieUtmSource',   utmSource,   expiration * 2);
+        if (utmMedium)   setCookie('cookieUtmMedium',   utmMedium,   expiration * 2);
         if (utmCampaign) setCookie('cookieUtmCampaign', utmCampaign, expiration * 2);
-        if (utmContent) setCookie('cookieUtmContent', utmContent, expiration * 2);
-        if (utmTerm) setCookie('cookieUtmTerm', utmTerm, expiration * 2);
+        if (utmContent)  setCookie('cookieUtmContent',  utmContent,  expiration * 2);
+        if (utmTerm)     setCookie('cookieUtmTerm',     utmTerm,     expiration * 2);
     }
 
     // Parametros atuais da URL
@@ -115,8 +123,15 @@
         if (medArr.length) paramsObj.utm_medium = medArr.join('|');
     }
 
+    // Garantir utm_source na URL
+    if (!paramsObj.utm_source) {
+        paramsObj.utm_source = utmSource;
+    }
+
     // Reconstruir querystring se houve modificação
-    var modified = !window.location.search.includes('utm_content') || !window.location.search.includes('utm_medium');
+    var modified = !window.location.search.includes('utm_source')
+                || !window.location.search.includes('utm_content')
+                || !window.location.search.includes('utm_medium');
     if (modified) {
         var newQ = '?';
         var first = true;
@@ -136,7 +151,8 @@
             a.href = href;
             var search = a.search.substring(1).split('&').reduce(function(acc, pair) {
                 var p = pair.split('=');
-                if (p.length === 2) acc[p[0]] = p[1]; return acc;
+                if (p.length === 2) acc[p[0]] = p[1];
+                return acc;
             }, {});
             var changed = false;
             if (!search.utm_content) { search.utm_content = indexValue; changed = true; }
@@ -147,6 +163,7 @@
                 });
                 if (mv.length) { search.utm_medium = mv.join('|'); changed = true; }
             }
+            if (!search.utm_source) { search.utm_source = utmSource; changed = true; }
             if (changed) {
                 var s = '?'; var f = true;
                 for (var key in search) {
