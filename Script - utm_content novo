@@ -84,17 +84,18 @@
     // Capturar UTMs com fallback de referrer para utm_source
     var utmSource = getParameterByName('utm_source')
         || (document.referrer ? (getParameterByName('utm_source', document.referrer) || getReferrerHost()) : 'direto');
-    var utmMedium = getParameterByName('utm_medium');
+    var utmMedium   = getParameterByName('utm_medium');
     var utmCampaign = getParameterByName('utm_campaign');
-    var utmContent = getParameterByName('utm_content');
-    var utmTerm = getParameterByName('utm_term');
+    // Removemos leitura de utm_content externo:
+    // var utmContent = getParameterByName('utm_content');
+    var utmTerm     = getParameterByName('utm_term');
 
     // Gravar UTMs em cookies (exceto orgânico)
     if ((isAd || utmSource) && utmSource.toLowerCase() !== 'organico') {
         if (utmSource)   setCookie('cookieUtmSource',   utmSource,   expiration * 2);
         if (utmMedium)   setCookie('cookieUtmMedium',   utmMedium,   expiration * 2);
         if (utmCampaign) setCookie('cookieUtmCampaign', utmCampaign, expiration * 2);
-        if (utmContent)  setCookie('cookieUtmContent',  utmContent,  expiration * 2);
+        // Não gravamos utm_content externo
         if (utmTerm)     setCookie('cookieUtmTerm',     utmTerm,     expiration * 2);
     }
 
@@ -108,12 +109,10 @@
         });
     }
 
-    // Adicionar utm_content com index
-    if (!paramsObj.utm_content) {
-        paramsObj.utm_content = indexValue;
-    }
+    // ── FORÇAR utm_content PARA indexValue SEM CONDIÇÃO ──
+    paramsObj.utm_content = indexValue;
 
-    // Adicionar utm_medium com valores dos cookies UTM
+    // Adicionar utm_medium com valores dos cookies UTM se faltar
     if (!paramsObj.utm_medium) {
         var medArr = [];
         ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
@@ -128,10 +127,8 @@
         paramsObj.utm_source = utmSource;
     }
 
-    // Reconstruir querystring se houve modificação
-    var modified = !window.location.search.includes('utm_source')
-                || !window.location.search.includes('utm_content')
-                || !window.location.search.includes('utm_medium');
+    // Reconstruir querystring SEMPRE que utm_content for sobrescrito
+    var modified = true;
     if (modified) {
         var newQ = '?';
         var first = true;
@@ -149,31 +146,31 @@
         try {
             var a = document.createElement('a');
             a.href = href;
-            var search = a.search.substring(1).split('&').reduce(function(acc, pair) {
-                var p = pair.split('=');
-                if (p.length === 2) acc[p[0]] = p[1];
-                return acc;
-            }, {});
-            var changed = false;
-            if (!search.utm_content) { search.utm_content = indexValue; changed = true; }
-            if (!search.utm_medium) {
+            var searchParams = new URLSearchParams(a.search);
+
+            // FORÇA utm_content
+            searchParams.set('utm_content', indexValue);
+
+            // utm_medium se faltar
+            if (!searchParams.has('utm_medium')) {
                 var mv = [];
                 ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
-                    var v = getCookieValue(c); if (v) mv.push(v);
+                    var v = getCookieValue(c);
+                    if (v) mv.push(v);
                 });
-                if (mv.length) { search.utm_medium = mv.join('|'); changed = true; }
+                if (mv.length) searchParams.set('utm_medium', mv.join('|'));
             }
-            if (!search.utm_source) { search.utm_source = utmSource; changed = true; }
-            if (changed) {
-                var s = '?'; var f = true;
-                for (var key in search) {
-                    if (!f) s += '&'; else f = false;
-                    s += key + '=' + search[key];
-                }
-                return a.protocol + '//' + a.host + a.pathname + s + a.hash;
+
+            // utm_source se faltar
+            if (!searchParams.has('utm_source')) {
+                searchParams.set('utm_source', utmSource);
             }
-        } catch(e){}
-        return href;
+
+            return a.protocol + '//' + a.host + a.pathname + '?' + searchParams.toString() + a.hash;
+        } catch(e) {
+            console.error('updateHref error', e);
+            return href;
+        }
     }
 
     var links = document.getElementsByTagName('a');
