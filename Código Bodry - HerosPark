@@ -1,0 +1,44 @@
+{
+  "event": "{{event}}",
+  "transaction_id": "{{payment_id}}",
+
+  "buyer": {
+    "doc": "{{buyer_document_type}}",
+    "name": "{{buyer_name}}",
+    "email": "{{buyer_email}}",
+    "phone": "{{buyer_phone}}"
+  },
+
+  "product": {
+    "id": "{{product_id}}",
+    "name": "{{product_name}}"
+  },
+
+  "purchase": {
+    "price": {
+      "gross": "{{offer_price}}",
+      "value": "{{ payment_value | divided_by: 100.00 }}"
+    },
+    "status": "{{payment_status}}",
+    "payment": {
+      "type": "{{payment_method}}",
+      "refusal_reason": "{{credit_card_refused_message}}"
+    },
+    "created_at": "{{payment_date}}",
+    "transaction": "{{payment_id}}",
+    "subscription": {
+      "id": "{{subscription_id}}",
+      "status": "{{subscription_status}}"
+    },
+    "expiration_at": "{{pix_expiration_at | boleto_expiration_at}}"
+  },
+
+  "utm": {
+    "source": "{{utm_source}}",
+    "medium": "{{utm_medium}}",
+    "campaign": "{{utm_campaign}}",
+    "term": "{{utm_term}}",
+    "content": "{{utm_content}}",
+    "src": "{{ cart_src }}"
+  }
+}
