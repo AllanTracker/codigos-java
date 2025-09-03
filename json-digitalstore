@@ -1,0 +1,41 @@
+{
+  "affiliateId": "4822803",
+  "affiliateName": "Allansilva1456",
+  "amountGross": "2.34",
+  "amountNet": "2.12",
+  "billingType": "single_payment",
+  "cid_index": "some-id",
+  "client_id": "dcid.1.1756903409446.497358622",
+  "commission": "1.54",
+  "country": "BR",
+  "currency": "USD",
+  "dateTime": "2025-09-03T14:43:28+02:00",
+  "email": "E-mail",
+  "event_name": "Data",
+  "firstname": "",
+  "ip_override": "34.95.42.191",
+  "lastname": "",
+  "merchantId": "123",
+  "merchantName": "Some-vendor",
+  "order_id": "ABCD1234",
+  "product_id": "12345",
+  "product_name": "Nome do produto",
+  "status": "completed",
+  "timestamp": 1756903409,
+  "transaction_id": "123456789",
+  "transactionType": "payment",
+  "unique_event_id": "1756903409443_665687822",
+  "user_agent": "DigiStore-API/1.0 (Linux; en-US; rv:1.0.0.0) php/20130430 curl/20130430",
+  "user_data": {
+    "email_address": "E-mail",
+    "address": {
+      "country": "BR"
+    }
+  },
+  "utmCampaign": "",
+  "utmContent": "",
+  "utmMedium": "",
+  "utmSource": "",
+  "utmTerm": "",
+  "vendorAmount": "0.00"
+}
