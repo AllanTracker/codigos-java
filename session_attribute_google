@@ -1,0 +1,40 @@
+<script>
+(function () {
+  function getSessionAttributes() {
+    var searchParams = new URLSearchParams(window.location.search);
+ 
+    var hasGoogleAdsParams =
+      Array.from(searchParams.keys()).some(function (key) { return key.indexOf('gad_') === 0; }) ||
+      searchParams.has('gclid') ||
+      searchParams.has('gbraid');
+ 
+    if (hasGoogleAdsParams) {
+      var params = {};
+      searchParams.forEach(function (value, key) {
+        if (key.indexOf('gad_') === 0) { params[key] = value; }
+      });
+ 
+      params['session_start_time_usec'] = (new Date().getTime() * 1000).toString();
+      params['landing_page_url'] = window.location.href;
+      params['landing_page_referrer'] = document.referrer;
+      params['landing_page_user_agent'] = navigator.userAgent;
+ 
+      var sessionAttributesEncoded = btoa(JSON.stringify(params))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+ 
+      try { localStorage.setItem('google_session_attributes', sessionAttributesEncoded); } catch (e) {}
+      return sessionAttributesEncoded;
+    }
+ 
+    try {
+      return localStorage.getItem('google_session_attributes') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+ 
+  getSessionAttributes();
+})();
+</script>
