@@ -1,0 +1,24 @@
+function() {
+  
+  function getCookieValue(name) {
+    var value = "; " + document.cookie;
+    var parts = value.split("; " + name + "=");
+    if (parts.length === 2) return parts.pop().split(";").shift();
+  }
+
+  
+  var leadValue = sessionStorage.getItem('google_session_attributes');
+
+  
+  if (!leadValue) {
+    leadValue = localStorage.getItem('google_session_attributes');
+  }
+
+  
+  if (!leadValue) {
+    leadValue = getCookieValue('google_session_attributes');
+  }
+
+  
+  return leadValue || undefined;
+}
