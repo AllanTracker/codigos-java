@@ -1,5 +1,6 @@
 <script>
 (function () {
+    // Função para obter o valor de um parâmetro da URL
     function getParameterByName(name, url) {
         if (!url) url = window.location.href;
         name = name.replace(/[\[\]]/g, "\\$&");
@@ -10,14 +11,19 @@
         return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
-    function setCookie(name, value, expirationTime) {
+    // Função para definir um cookie com domínio
+    function setCookie(cookieName, cookieValue, expirationTime) {
+        var cookiePath = "/";
+        expirationTime = expirationTime * 1000; // Converter para milissegundos
         var date = new Date();
-        date.setTime(date.getTime() + expirationTime * 1000);
-        var expires = "; expires=" + date.toUTCString();
-        var domain = ".seudominioaqui.com.br";
-        document.cookie = name + "=" + value + expires + "; path=/; domain=" + domain;
+        var now = date.getTime();
+        date.setTime(now + expirationTime);
+        var expires = date.toUTCString();
+        var domain = ".seudominio.com";
+        document.cookie = cookieName + "=" + cookieValue + "; expires=" + expires + "; path=" + cookiePath + "; domain=" + domain;
     }
 
+    // Função para obter o valor de um cookie pelo nome
     function getCookieValue(name) {
         var nameEQ = name + "=";
         var ca = document.cookie.split(';');
@@ -28,112 +34,172 @@
         return null;
     }
 
-    // Define o `index` baseado no parâmetro `src`
-    var cookieName = "index";
-    var srcValue = getParameterByName("src");
-    var eventId = srcValue || getCookieValue(cookieName) || localStorage.getItem(cookieName) || new Date().getTime().toString();
-
-    // Armazena o `index` em cookies e storage
-    setCookie(cookieName, eventId, 34560000);
-    localStorage.setItem(cookieName, eventId);
-    sessionStorage.setItem(cookieName, eventId);
-
-    var dateCookieName = "entry_date";
-    var entryDate = getCookieValue(dateCookieName) || localStorage.getItem(dateCookieName) || new Date().getTime().toString();
-
-    setCookie(dateCookieName, entryDate, 34560000);
-    localStorage.setItem(dateCookieName, entryDate);
-    sessionStorage.setItem(dateCookieName, entryDate);
-
-    var adParams = ['fbclid', 'gclid'];
-    var isAdClick = adParams.some(function(param) {
-        return getParameterByName(param);
-    });
-
-    if (isAdClick) {
-        var utmParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
-        for (var i = 0; i < utmParams.length; i++) {
-            var param = utmParams[i];
-            var value = getParameterByName(param);
-
-            // Não sobrescreve o utm_term com eventId
-            if (param === 'utm_term') {
-                continue;
-            }
-
-            if (value) {
-                var cookieNameUtm = 'cookie' + param.charAt(0).toUpperCase() + param.slice(1);
-                setCookie(cookieNameUtm, value, 63072000);
-            }
-        }
-    }
-
-    var utms = {};
-    var referrerHost = document.referrer ? (function() {
+    // Função para obter host do referrer
+    function getReferrerHost() {
         var a = document.createElement('a');
         a.href = document.referrer;
         return a.hostname;
-    })() : "direto";
+    }
 
-    var paramsList = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'src'];
-    for (var j = 0; j < paramsList.length; j++) {
-        var param = paramsList[j];
-        if (param === 'src') {
-            utms[param] = srcValue || eventId; // Prioriza o `src`
-        } else {
-            utms[param] = getParameterByName(param) || getCookieValue('cookie' + param.charAt(0).toUpperCase() + param.slice(1)) || (param === "utm_source" ? referrerHost : "");
+    // Definir nome do cookie index e obter valor
+    var cookieName = "index";
+    var indexValue = getCookieValue(cookieName);
+
+    // fallback para localStorage
+    if (!indexValue) {
+        indexValue = localStorage.getItem(cookieName);
+    }
+
+    // valor padrão via GTM
+    if (!indexValue || indexValue === '') {
+        indexValue = {{event_id}};
+    }
+
+    // Armazenar index em cookie/storage
+    var expiration = 34560000; // um ano em segundos
+    setCookie(cookieName, indexValue, expiration);
+    localStorage.setItem(cookieName, indexValue);
+    sessionStorage.setItem(cookieName, indexValue);
+
+    // Salvar data de entrada
+    var dateCookie = "entry_date";
+    var entryDate = getCookieValue(dateCookie);
+    if (!entryDate) {
+        entryDate = new Date().getTime().toString();
+        setCookie(dateCookie, entryDate, expiration);
+        localStorage.setItem(dateCookie, entryDate);
+        sessionStorage.setItem(dateCookie, entryDate);
+    }
+
+    // Parâmetros de anúncio
+    var adParams = ['fbclid', 'gclid'];
+    var isAd = false;
+    for (var i = 0; i < adParams.length; i++) {
+        if (getParameterByName(adParams[i])) {
+            isAd = true;
+            break;
         }
     }
 
-    var currentParams = new URLSearchParams(window.location.search);
-    var modified = false;
+    // Capturar UTMs com fallback de referrer para utm_source
+    var utmSource = getParameterByName('utm_source')
+        || (document.referrer ? (getParameterByName('utm_source', document.referrer) || getReferrerHost()) : 'direto');
+    var utmMedium   = getParameterByName('utm_medium');
+    var utmCampaign = getParameterByName('utm_campaign');
+    var utmTerm     = getParameterByName('utm_term');
 
-    for (var key in utms) {
-        if (utms.hasOwnProperty(key) && utms[key] && !currentParams.has(key)) {
-            currentParams.set(key, utms[key]);
-            modified = true;
-        }
+    // Gravar UTMs em cookies (exceto orgânico)
+    if ((isAd || utmSource) && utmSource.toLowerCase() !== 'organico') {
+        if (utmSource)   setCookie('cookieUtmSource',   utmSource,   expiration * 2);
+        if (utmMedium)   setCookie('cookieUtmMedium',   utmMedium,   expiration * 2);
+        if (utmCampaign) setCookie('cookieUtmCampaign', utmCampaign, expiration * 2);
+        if (utmTerm)     setCookie('cookieUtmTerm',     utmTerm,     expiration * 2);
     }
 
+    // Parametros atuais da URL
+    var currentSearch = window.location.search.substring(1);
+    var paramsObj = {};
+    if (currentSearch) {
+        currentSearch.split('&').forEach(function(pair) {
+            var p = pair.split('=');
+            if (p.length === 2) paramsObj[decodeURIComponent(p[0])] = decodeURIComponent(p[1]);
+        });
+    }
+
+    // ── FORÇAR src PARA indexValue SEM CONDIÇÃO ──
+    paramsObj.src = indexValue;
+
+    // ── PASSAR COOKIES DE UTM PARA utm_term ──
+    if (!paramsObj.utm_term) {
+        var termArr = [];
+        ['cookieUtmSource','cookieUtmMedium','cookieUtmCampaign','cookieUtmTerm'].forEach(function(c) {
+            var v = getCookieValue(c);
+            if (v) termArr.push(v);
+        });
+        if (termArr.length) paramsObj.utm_term = termArr.join('|');
+    }
+
+    // Garantir utm_source na URL
+    if (!paramsObj.utm_source) {
+        paramsObj.utm_source = utmSource;
+    }
+
+    // Reconstruir querystring SEMPRE
+    var modified = true;
     if (modified) {
-        var newURL = window.location.origin + window.location.pathname + '?' + currentParams.toString() + window.location.hash;
-        window.history.replaceState(null, null, newURL);
-    }
-
-    function updateElementHref(el, href) {
-        try {
-            var elURL = new URL(href, window.location.origin);
-            var elParams = new URLSearchParams(elURL.search);
-            var modifiedEl = false;
-
-            for (var key in utms) {
-                if (utms.hasOwnProperty(key) && utms[key] && !elParams.has(key)) {
-                    elParams.set(key, utms[key]);
-                    modifiedEl = true;
-                }
-            }
-
-            if (modifiedEl) {
-                elURL.search = elParams.toString();
-                return elURL.toString();
-            }
-            return href;
-        } catch (e) {
-            console.warn('Erro ao processar URL:', href);
-            return href;
+        var newQ = '?';
+        var first = true;
+        for (var k in paramsObj) {
+            if (first) first = false;
+            else newQ += '&';
+            newQ += encodeURIComponent(k) + '=' + encodeURIComponent(paramsObj[k]);
         }
+        var newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + newQ + window.location.hash;
+        window.history.replaceState(null, null, newUrl);
     }
 
     // Atualizar links e iframes
-    var elements = document.querySelectorAll('a[href], iframe[src]');
-    for (var k = 0; k < elements.length; k++) {
-        var el = elements[k];
-        if (el.tagName === "A") {
-            el.href = updateElementHref(el, el.href);
+    function updateHref(el, href) {
+        try {
+            var a = document.createElement('a');
+            a.href = href;
+            var searchParams = new URLSearchParams(a.search);
+
+            // CAPTURAR UTMs DA URL ATUAL
+            var currentParams = new URLSearchParams(window.location.search);
+            
+            // Preservar utm_source
+            if (currentParams.has('utm_source') && !searchParams.has('utm_source')) {
+                searchParams.set('utm_source', currentParams.get('utm_source'));
+            } else if (!searchParams.has('utm_source')) {
+                searchParams.set('utm_source', utmSource);
+            }
+
+            // Preservar utm_medium
+            if (currentParams.has('utm_medium') && !searchParams.has('utm_medium')) {
+                searchParams.set('utm_medium', currentParams.get('utm_medium'));
+            }
+
+            // Preservar utm_campaign
+            if (currentParams.has('utm_campaign') && !searchParams.has('utm_campaign')) {
+                searchParams.set('utm_campaign', currentParams.get('utm_campaign'));
+            }
+
+            // Preservar utm_content
+            if (currentParams.has('utm_content') && !searchParams.has('utm_content')) {
+                searchParams.set('utm_content', currentParams.get('utm_content'));
+            }
+
+            // ── PASSAR COOKIES DE UTM PARA utm_term ──
+            if (currentParams.has('utm_term') && !searchParams.has('utm_term')) {
+                searchParams.set('utm_term', currentParams.get('utm_term'));
+            } else if (!searchParams.has('utm_term')) {
+                var tv = [];
+                ['cookieUtmSource','cookieUtmMedium','cookieUtmCampaign','cookieUtmTerm'].forEach(function(c) {
+                    var v = getCookieValue(c);
+                    if (v) tv.push(v);
+                });
+                if (tv.length) searchParams.set('utm_term', tv.join('|'));
+            }
+
+            // ── FORÇA src PARA indexValue (sempre sobrescreve) ──
+            searchParams.set('src', indexValue);
+
+            return a.protocol + '//' + a.host + a.pathname + '?' + searchParams.toString() + a.hash;
+        } catch(e) {
+            console.error('updateHref error', e);
+            return href;
         }
-        if (el.tagName === "IFRAME") {
-            el.src = updateElementHref(el, el.src);
-        }
+    }
+
+    var links = document.getElementsByTagName('a');
+    for (var j = 0; j < links.length; j++) {
+        links[j].href = updateHref(links[j], links[j].href);
+    }
+    var iframes = document.getElementsByTagName('iframe');
+    for (var j = 0; j < iframes.length; j++) {
+        var srcAtt = iframes[j].getAttribute('data-src') || iframes[j].src;
+        iframes[j].setAttribute('data-src', updateHref(iframes[j], srcAtt));
     }
 })();
 </script>
