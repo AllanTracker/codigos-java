@@ -1,0 +1,18 @@
+https://www.google-analytics.com/mp/collect?measurement_id=${measurement_id}&api_secret=${api_secret}
+
+
+Content-Type = application/json
+
+
+    • client_id → Banco de Dados
+    • timestamp_micros
+    • session_id → Banco de Dados
+    • page_location → Banco de Dados
+    • session_number → Banco de Dados
+    • item_id → Webhook
+    • item_name → Webhook
+    • price → Webhook
+    • quantity → Webhook
+    • value → Webhook
+    • currency → Webhook
+    • transaction_id → Webhook
