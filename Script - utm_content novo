@@ -86,8 +86,6 @@
         || (document.referrer ? (getParameterByName('utm_source', document.referrer) || getReferrerHost()) : 'direto');
     var utmMedium   = getParameterByName('utm_medium');
     var utmCampaign = getParameterByName('utm_campaign');
-    // Removemos leitura de utm_content externo:
-    // var utmContent = getParameterByName('utm_content');
     var utmTerm     = getParameterByName('utm_term');
 
     // Gravar UTMs em cookies (exceto orgânico)
@@ -95,7 +93,6 @@
         if (utmSource)   setCookie('cookieUtmSource',   utmSource,   expiration * 2);
         if (utmMedium)   setCookie('cookieUtmMedium',   utmMedium,   expiration * 2);
         if (utmCampaign) setCookie('cookieUtmCampaign', utmCampaign, expiration * 2);
-        // Não gravamos utm_content externo
         if (utmTerm)     setCookie('cookieUtmTerm',     utmTerm,     expiration * 2);
     }
 
@@ -112,14 +109,14 @@
     // ── FORÇAR utm_content PARA indexValue SEM CONDIÇÃO ──
     paramsObj.utm_content = indexValue;
 
-    // Adicionar utm_medium com valores dos cookies UTM se faltar
-    if (!paramsObj.utm_medium) {
-        var medArr = [];
-        ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
+    // ── PASSAR COOKIES DE UTM PARA utm_term ──
+    if (!paramsObj.utm_term) {
+        var termArr = [];
+        ['cookieUtmSource','cookieUtmMedium','cookieUtmCampaign','cookieUtmTerm'].forEach(function(c) {
             var v = getCookieValue(c);
-            if (v) medArr.push(v);
+            if (v) termArr.push(v);
         });
-        if (medArr.length) paramsObj.utm_medium = medArr.join('|');
+        if (termArr.length) paramsObj.utm_term = termArr.join('|');
     }
 
     // Garantir utm_source na URL
@@ -148,23 +145,40 @@
             a.href = href;
             var searchParams = new URLSearchParams(a.search);
 
-            // FORÇA utm_content
-            searchParams.set('utm_content', indexValue);
-
-            // utm_medium se faltar
-            if (!searchParams.has('utm_medium')) {
-                var mv = [];
-                ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
-                    var v = getCookieValue(c);
-                    if (v) mv.push(v);
-                });
-                if (mv.length) searchParams.set('utm_medium', mv.join('|'));
-            }
-
-            // utm_source se faltar
-            if (!searchParams.has('utm_source')) {
+            // CAPTURAR UTMs DA URL ATUAL
+            var currentParams = new URLSearchParams(window.location.search);
+            
+            // Preservar utm_source
+            if (currentParams.has('utm_source') && !searchParams.has('utm_source')) {
+                searchParams.set('utm_source', currentParams.get('utm_source'));
+            } else if (!searchParams.has('utm_source')) {
                 searchParams.set('utm_source', utmSource);
             }
+
+            // Preservar utm_medium
+            if (currentParams.has('utm_medium') && !searchParams.has('utm_medium')) {
+                searchParams.set('utm_medium', currentParams.get('utm_medium'));
+            }
+
+            // Preservar utm_campaign
+            if (currentParams.has('utm_campaign') && !searchParams.has('utm_campaign')) {
+                searchParams.set('utm_campaign', currentParams.get('utm_campaign'));
+            }
+
+            // ── PASSAR COOKIES DE UTM PARA utm_term ──
+            if (currentParams.has('utm_term') && !searchParams.has('utm_term')) {
+                searchParams.set('utm_term', currentParams.get('utm_term'));
+            } else if (!searchParams.has('utm_term')) {
+                var tv = [];
+                ['cookieUtmSource','cookieUtmMedium','cookieUtmCampaign','cookieUtmTerm'].forEach(function(c) {
+                    var v = getCookieValue(c);
+                    if (v) tv.push(v);
+                });
+                if (tv.length) searchParams.set('utm_term', tv.join('|'));
+            }
+
+            // FORÇA utm_content (sempre sobrescreve)
+            searchParams.set('utm_content', indexValue);
 
             return a.protocol + '//' + a.host + a.pathname + '?' + searchParams.toString() + a.hash;
         } catch(e) {
