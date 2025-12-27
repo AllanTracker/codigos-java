@@ -14,7 +14,7 @@
     // Função para definir um cookie com domínio
     function setCookie(cookieName, cookieValue, expirationTime) {
         var cookiePath = "/";
-        expirationTime = expirationTime * 1000; // Converter tempo de expiração para milissegundos
+        expirationTime = expirationTime * 1000; // Converter para milissegundos
         var date = new Date();
         var now = date.getTime();
         date.setTime(now + expirationTime);
@@ -82,23 +82,21 @@
     }
 
     // Capturar UTMs com fallback de referrer para utm_source
-    var utmSource = getParameterByName('utm_source') || (document.referrer ? (getParameterByName('utm_source', document.referrer) || getReferrerHost()) : 'direto');
-    var utmMedium = getParameterByName('utm_medium');
+    var utmSource = getParameterByName('utm_source')
+        || (document.referrer ? (getParameterByName('utm_source', document.referrer) || getReferrerHost()) : 'direto');
+    var utmMedium   = getParameterByName('utm_medium');
     var utmCampaign = getParameterByName('utm_campaign');
-    var utmContent = getParameterByName('utm_content');
-    // REMOVEMOS a captura de utm_term via URL:
-    // var utmTerm = getParameterByName('utm_term');
+    var utmTerm     = getParameterByName('utm_term');
 
     // Gravar UTMs em cookies (exceto orgânico)
     if ((isAd || utmSource) && utmSource.toLowerCase() !== 'organico') {
         if (utmSource)   setCookie('cookieUtmSource',   utmSource,   expiration * 2);
         if (utmMedium)   setCookie('cookieUtmMedium',   utmMedium,   expiration * 2);
         if (utmCampaign) setCookie('cookieUtmCampaign', utmCampaign, expiration * 2);
-        if (utmContent)  setCookie('cookieUtmContent',  utmContent,  expiration * 2);
-        // Não gravamos utm_term externo
+        if (utmTerm)     setCookie('cookieUtmTerm',     utmTerm,     expiration * 2);
     }
 
-    // Parâmetros atuais da URL
+    // Parametros atuais da URL
     var currentSearch = window.location.search.substring(1);
     var paramsObj = {};
     if (currentSearch) {
@@ -111,18 +109,23 @@
     // ── FORÇAR utm_term PARA indexValue SEM CONDIÇÃO ──
     paramsObj.utm_term = indexValue;
 
-    // Adicionar utm_content com valores dos cookies UTM se faltar
+    // ── PASSAR COOKIES DE UTM PARA utm_content ──
     if (!paramsObj.utm_content) {
-        var contArr = [];
-        ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
+        var contentArr = [];
+        ['cookieUtmSource','cookieUtmMedium','cookieUtmCampaign','cookieUtmTerm'].forEach(function(c) {
             var v = getCookieValue(c);
-            if (v) contArr.push(v);
+            if (v) contentArr.push(v);
         });
-        if (contArr.length) paramsObj.utm_content = contArr.join('|');
+        if (contentArr.length) paramsObj.utm_content = contentArr.join('|');
     }
 
-    // Reconstruir querystring SEMPRE que precisar (utm_term mudou ou utm_source faltar)
-    var modified = true; // sempre substituímos, já que utm_term foi sobrescrito
+    // Garantir utm_source na URL
+    if (!paramsObj.utm_source) {
+        paramsObj.utm_source = utmSource;
+    }
+
+    // Reconstruir querystring SEMPRE que utm_term for sobrescrito
+    var modified = true;
     if (modified) {
         var newQ = '?';
         var first = true;
@@ -130,10 +133,6 @@
             if (first) first = false;
             else newQ += '&';
             newQ += encodeURIComponent(k) + '=' + encodeURIComponent(paramsObj[k]);
-        }
-        // garantir utm_source na URL
-        if (!newQ.includes('utm_source=')) {
-            newQ += '&utm_source=' + encodeURIComponent(utmSource);
         }
         var newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + newQ + window.location.hash;
         window.history.replaceState(null, null, newUrl);
@@ -145,21 +144,42 @@
             var a = document.createElement('a');
             a.href = href;
             var searchParams = new URLSearchParams(a.search);
-            // FORÇA utm_term
-            searchParams.set('utm_term', indexValue);
-            // utm_content se faltar
-            if (!searchParams.has('utm_content')) {
+
+            // CAPTURAR UTMs DA URL ATUAL
+            var currentParams = new URLSearchParams(window.location.search);
+            
+            // Preservar utm_source
+            if (currentParams.has('utm_source') && !searchParams.has('utm_source')) {
+                searchParams.set('utm_source', currentParams.get('utm_source'));
+            } else if (!searchParams.has('utm_source')) {
+                searchParams.set('utm_source', utmSource);
+            }
+
+            // Preservar utm_medium
+            if (currentParams.has('utm_medium') && !searchParams.has('utm_medium')) {
+                searchParams.set('utm_medium', currentParams.get('utm_medium'));
+            }
+
+            // Preservar utm_campaign
+            if (currentParams.has('utm_campaign') && !searchParams.has('utm_campaign')) {
+                searchParams.set('utm_campaign', currentParams.get('utm_campaign'));
+            }
+
+            // ── PASSAR COOKIES DE UTM PARA utm_content ──
+            if (currentParams.has('utm_content') && !searchParams.has('utm_content')) {
+                searchParams.set('utm_content', currentParams.get('utm_content'));
+            } else if (!searchParams.has('utm_content')) {
                 var cv = [];
-                ['cookieUtmSource','cookieUtmCampaign','cookieUtmContent','cookieUtmTerm'].forEach(function(c) {
+                ['cookieUtmSource','cookieUtmMedium','cookieUtmCampaign','cookieUtmTerm'].forEach(function(c) {
                     var v = getCookieValue(c);
                     if (v) cv.push(v);
                 });
                 if (cv.length) searchParams.set('utm_content', cv.join('|'));
             }
-            // utm_source se faltar
-            if (!searchParams.has('utm_source')) {
-                searchParams.set('utm_source', utmSource);
-            }
+
+            // ── FORÇA utm_term PARA indexValue (sempre sobrescreve) ──
+            searchParams.set('utm_term', indexValue);
+
             return a.protocol + '//' + a.host + a.pathname + '?' + searchParams.toString() + a.hash;
         } catch(e) {
             console.error('updateHref error', e);
