@@ -1,0 +1,29 @@
+<script>
+(function() {
+  // Adiciona listener em todos os links que apontam para clkdmg.site
+  document.addEventListener('click', function(e) {
+    var target = e.target.closest('a');
+    
+    if (target && target.href && target.href.indexOf('clkdmg.site') !== -1) {
+      // Previne o redirecionamento imediato
+      e.preventDefault();
+      
+      // Dispara o evento no dataLayer
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        'event': 'initiate_checkout',
+        'eventCallback': function() {
+          // Após disparar o evento, redireciona
+          window.location.href = target.href;
+        },
+        'eventTimeout': 2000
+      });
+      
+      // Fallback: redireciona após 2 segundos mesmo se o callback não executar
+      setTimeout(function() {
+        window.location.href = target.href;
+      }, 2000);
+    }
+  }, true);
+})();
+</script>
