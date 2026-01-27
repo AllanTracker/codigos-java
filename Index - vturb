@@ -1,0 +1,270 @@
+<script>
+(function () {
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+    function setCookie(cookieName, cookieValue, expirationTime) {
+        var cookiePath = "/";
+        expirationTime = expirationTime * 1000;
+        var date = new Date();
+        var dateTimeNow = date.getTime();
+        date.setTime(dateTimeNow + expirationTime);
+        var expirationDate = date.toUTCString();
+        var domain = ".allantracker.com";
+        document.cookie = cookieName + "=" + cookieValue + "; expires=" + expirationDate + "; path=" + cookiePath + "; domain=" + domain;
+    }
+
+    function getCookieValue(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for (var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c=c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+
+    var cookieName = "index";
+    var sck = getCookieValue(cookieName);
+
+    if (!sck) {
+        sck = localStorage.getItem(cookieName);
+    }
+
+    if (!sck || sck === '') {
+        sck = {{event_id}};
+    }
+
+    var expirationTime = 34560000;
+    setCookie(cookieName, sck, expirationTime);
+    localStorage.setItem(cookieName, sck);
+    sessionStorage.setItem(cookieName, sck);
+
+    var dateCookieName = "entry_date";
+    var entryDate = getCookieValue(dateCookieName);
+
+    if (!entryDate) {
+        entryDate = localStorage.getItem(dateCookieName);
+    }
+
+    if (!entryDate || entryDate === '') {
+        entryDate = new Date().getTime().toString();
+
+        var dateExpirationTime = 34560000;
+        setCookie(dateCookieName, entryDate, dateExpirationTime);
+        localStorage.setItem(dateCookieName, entryDate);
+        sessionStorage.setItem(dateCookieName, entryDate);
+    }
+
+    var adParams = ['fbclid', 'gclid'];
+
+    var isAdClick = false;
+    for (var i = 0; i < adParams.length; i++) {
+        var param = adParams[i];
+        if (getParameterByName(param)) {
+            isAdClick = true;
+            break;
+        }
+    }
+
+    var utmSource = getParameterByName('utm_source');
+    var utmMedium = getParameterByName('utm_medium');
+    var utmCampaign = getParameterByName('utm_campaign');
+    var utmContent = getParameterByName('utm_content');
+    var utmTerm = getParameterByName('utm_term');
+
+    if (utmSource && utmSource.toLowerCase() !== 'organico') {
+        if (isAdClick || utmSource) {
+            if (utmSource) setCookie('cookieUtmSource', utmSource, 63072000);
+            if (utmMedium) setCookie('cookieUtmMedium', utmMedium, 63072000);
+            if (utmCampaign) setCookie('cookieUtmCampaign', utmCampaign, 63072000);
+            if (utmContent) setCookie('cookieUtmContent', utmContent, 63072000);
+            if (utmTerm) setCookie('cookieUtmTerm', utmTerm, 63072000);
+        }
+    }
+
+    var parametros = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+
+    var utms = {};
+
+    var cookieUtmSource = getCookieValue('cookieUtmSource');
+    var cookieUtmMedium = getCookieValue('cookieUtmMedium');
+    var cookieUtmCampaign = getCookieValue('cookieUtmCampaign');
+    var cookieUtmContent = getCookieValue('cookieUtmContent');
+    var cookieUtmTerm = getCookieValue('cookieUtmTerm');
+
+    for (var i = 0; i < parametros.length; i++) {
+        var el = parametros[i];
+        if (el === "utm_source") {
+            utms[el] = getParameterByName(el) || (document.referrer ? (getParameterByName(el, document.referrer) || getReferrerHost()) : "direto");
+        } else {
+            utms[el] = getParameterByName(el) || getParameterByName(el, document.referrer) || "";
+        }
+    }
+
+    function getReferrerHost() {
+        var a = document.createElement('a');
+        a.href = document.referrer;
+        return a.hostname;
+    }
+
+    var scks = [sck];
+
+    var srcValues = [];
+    if (cookieUtmSource) srcValues.push(cookieUtmSource);
+    if (cookieUtmMedium) srcValues.push(cookieUtmMedium);
+    if (cookieUtmCampaign) srcValues.push(cookieUtmCampaign);
+    if (cookieUtmContent) srcValues.push(cookieUtmContent);
+    if (cookieUtmTerm) srcValues.push(cookieUtmTerm);
+
+    var currentUrlParams = window.location.search ? window.location.search.substring(1) : '';
+    var currentParams = {};
+    if (currentUrlParams.length > 0) {
+        var pairs = currentUrlParams.split('&');
+        for (var i = 0; i < pairs.length; i++) {
+            var pair = pairs[i].split('=');
+            if (pair.length === 2) {
+                currentParams[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+            }
+        }
+    }
+
+    var modified = false;
+
+    for (var key in utms) {
+        if (utms.hasOwnProperty(key) && !currentParams.hasOwnProperty(key) && utms[key] !== "") {
+            currentParams[key] = utms[key];
+            modified = true;
+        }
+    }
+
+    if (!currentParams.hasOwnProperty('src') && srcValues.length > 0) {
+        currentParams['src'] = srcValues.join('|');
+        modified = true;
+    }
+
+    if (!currentParams.hasOwnProperty('sck') && scks.length > 0) {
+        currentParams['sck'] = scks.join('|');
+        modified = true;
+    }
+
+    if (modified) {
+        var newSearch = '?';
+        var first = true;
+        for (var key in currentParams) {
+            if (currentParams.hasOwnProperty(key)) {
+                if (!first) {
+                    newSearch += '&';
+                }
+                newSearch += encodeURIComponent(key) + '=' + encodeURIComponent(currentParams[key]);
+                first = false;
+            }
+        }
+        var newURL = window.location.protocol + '//' + window.location.host + window.location.pathname + newSearch + window.location.hash;
+        window.history.replaceState(null, null, newURL);
+    }
+
+    function updateElementHref(el, href) {
+        try {
+            var elURL = document.createElement('a');
+            elURL.href = href;
+            var elSearch = elURL.search ? elURL.search.substring(1) : '';
+            var elParams = {};
+            if (elSearch.length > 0) {
+                var pairs = elSearch.split('&');
+                for (var i = 0; i < pairs.length; i++) {
+                    var pair = pairs[i].split('=');
+                    if (pair.length === 2) {
+                        elParams[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+                    }
+                }
+            }
+            var modified = false;
+
+            for (var key in currentParams) {
+                if (currentParams.hasOwnProperty(key) && !elParams.hasOwnProperty(key)) {
+                    elParams[key] = currentParams[key];
+                    modified = true;
+                }
+            }
+
+            if (!elParams.hasOwnProperty('src') && srcValues.length > 0) {
+                elParams['src'] = srcValues.join('|');
+                modified = true;
+            }
+
+            if (!elParams.hasOwnProperty('sck') && scks.length > 0) {
+                elParams['sck'] = scks.join('|');
+                modified = true;
+            }
+
+            if (modified) {
+                var newSearch = '?';
+                var first = true;
+                for (var key in elParams) {
+                    if (elParams.hasOwnProperty(key)) {
+                        if (!first) {
+                            newSearch += '&';
+                        }
+                        newSearch += encodeURIComponent(key) + '=' + encodeURIComponent(elParams[key]);
+                        first = false;
+                    }
+                }
+                var newHref = elURL.protocol + '//' + elURL.host + elURL.pathname + newSearch + elURL.hash;
+                return newHref;
+            } else {
+                return href;
+            }
+        } catch (e) {
+            console.warn('Erro ao processar URL:', href);
+            return href;
+        }
+    }
+
+    function updateAllElements() {
+        var links = document.getElementsByTagName('a');
+        for (var i = 0; i < links.length; i++) {
+            var el = links[i];
+            if (el.href) {
+                var newHref = updateElementHref(el, el.href);
+                if (el.href !== newHref) {
+                    el.href = newHref;
+                }
+            }
+        }
+
+        var iframes = document.getElementsByTagName('iframe');
+        for (var i = 0; i < iframes.length; i++) {
+            var iframe = iframes[i];
+            var actualSrc = iframe.getAttribute('data-src') || iframe.src;
+            if (actualSrc) {
+                var newSrc = updateElementHref(iframe, actualSrc);
+                if (iframe.hasAttribute('data-src')) {
+                    iframe.setAttribute('data-src', newSrc);
+                } else {
+                    iframe.src = newSrc;
+                }
+            }
+        }
+    }
+
+    updateAllElements();
+
+    setInterval(updateAllElements, 500);
+
+    if (document.addEventListener) {
+        document.addEventListener('click', function(e) {
+            setTimeout(updateAllElements, 10);
+        }, true);
+    }
+
+})();
+</script>
