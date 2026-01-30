@@ -1,0 +1,24 @@
+function() {
+  // Configuração: defina aqui o valor de corte (threshold)
+  var valorCorte = 10;
+  
+  // Defina aqui a variável que você quer verificar
+  // Pode ser uma variável do dataLayer, outra variável GTM, etc.
+  var valorVerificar = {{sua_variavel_aqui}};
+  
+  // Converte para número para garantir comparação correta
+  valorVerificar = parseFloat(valorVerificar);
+  
+  // Verifica se o valor é válido (não é NaN)
+  if (isNaN(valorVerificar)) {
+    return undefined; // ou return null; dependendo da sua preferência
+  }
+  
+  // Retorna "lead A" se for maior que o valor de corte
+  if (valorVerificar > valorCorte) {
+    return "lead A";
+  }
+  
+  // Retorna undefined (ou outro valor padrão) caso contrário
+  return undefined;
+}
