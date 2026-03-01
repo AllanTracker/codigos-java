@@ -24,10 +24,10 @@
     function getCookieValue(name) {
         var nameEQ = name + "=";
         var ca = document.cookie.split(';');
-        for (var i=0;i < ca.length;i++) {
+        for (var i = 0; i < ca.length; i++) {
             var c = ca[i];
-            while (c.charAt(0)==' ') c=c.substring(1,c.length);
-            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
         }
         return null;
     }
@@ -229,6 +229,9 @@
         }
     }
 
+    /* Conjunto para rastrear iframes já processados e evitar recarregamentos */
+    var processedIframes = new WeakSet();
+
     function updateAllElements() {
         var links = document.getElementsByTagName('a');
         for (var i = 0; i < links.length; i++) {
@@ -244,24 +247,57 @@
         var iframes = document.getElementsByTagName('iframe');
         for (var i = 0; i < iframes.length; i++) {
             var iframe = iframes[i];
+
+            /* Se o iframe já foi processado, pula para não causar refresh */
+            if (processedIframes.has(iframe)) {
+                continue;
+            }
+
             var actualSrc = iframe.getAttribute('data-src') || iframe.src;
             if (actualSrc) {
                 var newSrc = updateElementHref(iframe, actualSrc);
                 if (iframe.hasAttribute('data-src')) {
-                    iframe.setAttribute('data-src', newSrc);
+                    if (iframe.getAttribute('data-src') !== newSrc) {
+                        iframe.setAttribute('data-src', newSrc);
+                    }
                 } else {
-                    iframe.src = newSrc;
+                    if (iframe.src !== newSrc) {
+                        iframe.src = newSrc;
+                    }
                 }
+                /* Marca o iframe como já processado */
+                processedIframes.add(iframe);
             }
         }
     }
 
     updateAllElements();
 
-    setInterval(updateAllElements, 500);
+    /* MutationObserver para detectar novos elementos no DOM em vez de setInterval agressivo */
+    if (typeof MutationObserver !== 'undefined') {
+        var observer = new MutationObserver(function (mutations) {
+            var shouldUpdate = false;
+            for (var i = 0; i < mutations.length; i++) {
+                if (mutations[i].addedNodes && mutations[i].addedNodes.length > 0) {
+                    shouldUpdate = true;
+                    break;
+                }
+            }
+            if (shouldUpdate) {
+                updateAllElements();
+            }
+        });
+        observer.observe(document.body || document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+    } else {
+        /* Fallback para navegadores antigos, mas com intervalo maior */
+        setInterval(updateAllElements, 3000);
+    }
 
     if (document.addEventListener) {
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             setTimeout(updateAllElements, 10);
         }, true);
     }
