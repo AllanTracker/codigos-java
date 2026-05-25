@@ -1,0 +1,264 @@
+# PROMPT 1 — FRONTEND: RASTREAMENTO DE FACEBOOK ADS
+
+## INSTRUÇÃO GERAL
+
+Crie um aplicativo web de Rastreamento de Facebook Ads chamado "[NomeDoSeuApp]".
+É uma ferramenta pessoal — uso único, sem multitenancy, sem sistema de planos,
+sem landing page, sem cadastro público. Apenas um painel funcional para
+cruzar dados de vendas de checkouts com métricas de campanhas do Facebook Ads.
+
+**NÃO use o Supabase integrado do Lovable (Lovable Cloud).**
+O Supabase será externo, configurado manualmente. Use as variáveis de ambiente
+`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` para apontar para o projeto
+Supabase externo — nunca conecte ao Supabase embutido da plataforma Lovable.
+
+---
+
+## STACK TÉCNICA
+
+- React + TypeScript
+- Tailwind CSS
+- shadcn/ui para todos os componentes de UI
+- Recharts para gráficos
+- Lucide React para ícones
+- React Router para navegação
+- Supabase para banco de dados (sem Auth — sem login, sem registro)
+- Axios ou fetch nativo para chamadas à API do Facebook
+
+---
+
+## TEMA VISUAL
+
+- Dark mode como padrão e único modo
+- Fundo da página: `#0F0F23`
+- Fundo de cards: `#1A1A2E`
+- Verde para métricas positivas: `#00B894`
+- Vermelho para métricas negativas: `#E94560`
+- Azul para informações: `#74B9FF`
+- Referência visual: utmify.com.br (dashboard limpo e profissional)
+- Responsivo para desktop e mobile
+
+---
+
+## ESTRUTURA DE ROTAS
+
+O app tem APENAS estas 5 rotas — não crie nenhuma outra:
+
+| Rota | Tela |
+|---|---|
+| `/dashboard` | Dashboard principal |
+| `/campaigns` | Campanhas |
+| `/sales` | Vendas |
+| `/integrations` | Integrações |
+| `/settings` | Configurações |
+
+A rota `/` deve redirecionar automaticamente para `/dashboard`.
+Não existe login, registro, onboarding, landing page, admin ou recuperação de senha.
+
+---
+
+## COMPONENTES GLOBAIS
+
+### Sidebar de navegação
+- Fixa na lateral esquerda, colapsável em mobile (hamburguer)
+- Ícones + labels: Dashboard, Campanhas, Vendas, Integrações, Configurações
+- Highlight na rota ativa
+
+### Top header
+- Breadcrumb com o nome da tela atual
+- Botão de refresh global (recarrega os dados da tela)
+
+### Componentes de suporte
+- Loading skeletons em todas as tabelas e cards
+- Toast notifications para ações (sucesso, erro)
+- Modal de confirmação para ações destrutivas
+
+---
+
+## TELAS
+
+### 1. DASHBOARD (`/dashboard`)
+
+**Top bar da tela:**
+- Seletor de período: Hoje / 7 dias / 30 dias / Personalizado (date range picker)
+
+**Cards de métricas (linha superior):**
+- Faturamento Bruto
+- Faturamento Líquido
+- Gasto com Ads
+- ROI (%)
+- ROAS
+- CPA
+- Número de Vendas
+
+Cada card deve ter:
+- Valor principal em destaque
+- Seta de variação (verde ↑ / vermelho ↓) comparando com período anterior
+
+**Gráficos:**
+- Gráfico de linha (Recharts): Faturamento vs Gasto ao longo do tempo
+- Gráfico de pizza (Recharts): Vendas por fonte (Facebook, Orgânico, WhatsApp, Outros)
+
+**Tabela de resumo:**
+- Top 5 campanhas com: Nome, Gasto, Receita, ROAS, CPA
+
+Usar dados mockados realistas para demonstração.
+
+---
+
+### 2. CAMPANHAS (`/campaigns`)
+
+**Filtros:**
+- Status: Ativo / Pausado / Todos
+- Período (date range)
+- Busca por nome
+
+**Tabela principal — colunas:**
+Nome da Campanha | Status | Gasto | Vendas | Faturamento | ROI | ROAS | CPA | CPM | CPC | Impressões | Cliques
+
+**Expansão em accordion:**
+- Clicando em uma campanha, expande e mostra os Conjuntos de Anúncios dela
+- Clicando em um conjunto, expande e mostra os Anúncios individuais
+- Mesmas colunas de métricas em cada nível
+
+**Paginação** na tabela principal.
+
+Usar pelo menos 10 campanhas mockadas com nomes realistas em português,
+ex.: "Campanha - Curso de Tráfego Pago", "Remarketing - Mentoria Premium".
+
+---
+
+### 3. VENDAS (`/sales`)
+
+**Filtros:**
+- Período (date range)
+- Checkout: Hotmart / Kiwify / Kirvano / Todos
+- Tipo: Paga / Orgânica / Todos
+- Status: Aprovada / Pendente / Reembolsada / Todos
+
+**Tabela — colunas:**
+Data | Produto | Valor | Checkout | Campanha | Conjunto | Anúncio | Status | Tipo
+
+- Badge colorido para Status (verde = aprovada, amarelo = pendente, vermelho = reembolsada)
+- Badge colorido para Tipo (azul = paga, cinza = orgânica)
+
+Usar pelo menos 20 vendas mockadas.
+
+---
+
+### 4. INTEGRAÇÕES (`/integrations`)
+
+#### Card: Facebook Ads
+
+**Conexão via token manual — sem SDK, sem OAuth:**
+- Campo de input para o usuário colar o Access Token do Facebook
+- Botão "Conectar"
+- Ao conectar, o app chama a API do Facebook Graph:
+  `GET https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_id&access_token={token}`
+- A resposta lista todas as contas de anúncio disponíveis
+- Exibir um `<Select>` para o usuário escolher qual conta usar
+- Salvar o token e o `ad_account_id` selecionado no Supabase (tabela `settings`)
+- Exibir status: Conectado (verde) / Desconectado (vermelho)
+- Exibir o nome da conta conectada e o ID
+- Botão "Desconectar" que limpa o token e o ad_account_id do banco
+
+#### Card: Hotmart
+- URL do webhook para copiar: `https://[seu-dominio]/webhook/hotmart`
+- Status: Ativo / Inativo (baseado em se já recebeu ao menos 1 webhook)
+- Botão de copiar URL
+
+#### Card: Kiwify
+- URL do webhook para copiar: `https://[seu-dominio]/webhook/kiwify`
+- Status: Ativo / Inativo
+- Botão de copiar URL
+
+#### Card: Kirvano
+- URL do webhook para copiar: `https://[seu-dominio]/webhook/kirvano`
+- Status: Ativo / Inativo
+- Botão de copiar URL
+
+---
+
+### 5. CONFIGURAÇÕES (`/settings`)
+
+**Tabs:**
+
+**Aba "Geral":**
+- Nome do app (editável, salvo no Supabase)
+- Fuso horário (select)
+- Moeda padrão (select: BRL, USD, EUR)
+
+**Aba "Facebook Ads":**
+- Exibir token atual mascarado (primeiros 10 chars + `...`)
+- Campo para atualizar o token
+- Botão "Sincronizar agora" — dispara chamada à API do Facebook e atualiza
+  campanhas, conjuntos e anúncios no Supabase
+- Última sincronização: data e hora
+
+**Aba "Taxas":**
+- Listagem das taxas cadastradas (nome, tipo, valor)
+- Botão "Adicionar taxa" abre modal com:
+  - Nome da taxa
+  - Tipo: Percentual ou Fixo
+  - Valor
+  - Aplica-se a: Receita / Comissão
+- Botão de excluir cada taxa (com modal de confirmação)
+- As taxas são usadas para calcular o Faturamento Líquido no dashboard
+
+---
+
+## DADOS MOCKADOS
+
+Criar `/src/data/mockData.ts` com dados realistas em português para todas as telas.
+
+Incluir:
+- 10+ campanhas com conjuntos e anúncios aninhados
+- 20+ vendas com produtos, checkouts e status variados
+- Métricas de dashboard coerentes com as vendas e gastos mockados
+- Nomes de campanhas como: "Campanha - Curso de Tráfego Pago",
+  "Remarketing - Mentoria Premium", "Topo de Funil - Ebook Gratuito",
+  "Conversão - Consultoria 1:1", "Retargeting - Carrinho Abandonado"
+
+---
+
+## INTEGRAÇÃO COM SUPABASE
+
+Usar Supabase **externo** (NÃO o Supabase integrado do Lovable/Lovable Cloud).
+Usar apenas como banco de dados, sem Auth.
+Criar uma tabela `settings` simples para persistir:
+
+```sql
+CREATE TABLE public.settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
+```
+
+Exemplos de registros:
+- `facebook_token` → access token do Facebook
+- `facebook_ad_account_id` → ID da conta de anúncio selecionada
+- `facebook_ad_account_name` → nome da conta
+- `app_name` → nome do app
+- `timezone` → fuso horário
+- `currency` → moeda padrão
+- `last_fb_sync` → timestamp da última sincronização
+
+O cliente Supabase deve ser inicializado em `/src/lib/supabase.ts`
+com as variáveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+
+---
+
+## REGRAS DE IMPLEMENTAÇÃO
+
+- Todas as 5 telas devem ser funcionais com navegação completa
+- TypeScript com interfaces e types em `/src/types/`
+- Não criar arquivos CSS separados — usar somente Tailwind
+- Usar shadcn/ui para todos os componentes: Table, Card, Button, Input,
+  Select, Dialog, Tabs, Badge, Accordion, Skeleton, Toast
+- Sem sistema de autenticação, sem rotas protegidas, sem roles
+- Sem landing page, sem página de preços, sem FAQ
+- Sem multitenancy — o app é para um único usuário
+- **Supabase externo obrigatório**: conectar via variáveis de ambiente
+  `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` apontando para um
+  projeto Supabase criado manualmente — NÃO usar o Supabase embutido
+  do Lovable (Lovable Cloud) em nenhuma circunstância
