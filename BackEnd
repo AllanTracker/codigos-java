@@ -1,0 +1,474 @@
+# PROMPT 2 — BANCO DE DADOS: RASTREAMENTO DE FACEBOOK ADS
+
+## INSTRUÇÃO GERAL
+
+Execute este SQL no **Supabase externo** (projeto criado manualmente em
+supabase.com) — **NÃO use o Supabase integrado do Lovable (Lovable Cloud).**
+
+O frontend é construído no Lovable e se conecta a este Supabase externo
+via variáveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+
+Este script cria todas as tabelas necessárias para um app de uso pessoal
+(único usuário) — sem multitenancy, sem sistema de planos, sem Auth.
+
+**Não há RLS por usuário.** A segurança é garantida pela anon key do Supabase
+ficar apenas no ambiente local/servidor — nunca exposta publicamente.
+
+---
+
+## 1. TABELA DE CONFIGURAÇÕES
+
+Armazena token do Facebook, conta de anúncio selecionada e preferências gerais.
+Estrutura chave-valor simples.
+
+```sql
+CREATE TABLE public.settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Registros iniciais
+INSERT INTO public.settings (key, value) VALUES
+  ('facebook_token',           NULL),
+  ('facebook_ad_account_id',   NULL),
+  ('facebook_ad_account_name', NULL),
+  ('app_name',                 'Meu Rastreador'),
+  ('timezone',                 'America/Sao_Paulo'),
+  ('currency',                 'BRL'),
+  ('last_fb_sync',             NULL);
+```
+
+---
+
+## 2. TABELA DE CAMPANHAS (cache do Facebook)
+
+Populada pela sincronização com a API do Facebook Graph.
+
+```sql
+CREATE TABLE public.campaigns (
+  id                   UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  facebook_campaign_id TEXT NOT NULL UNIQUE,
+  campaign_name        TEXT NOT NULL,
+  status               TEXT DEFAULT 'ACTIVE',
+  objective            TEXT,
+  daily_budget         NUMERIC(12,2),
+  lifetime_budget      NUMERIC(12,2),
+  spend                NUMERIC(12,2) DEFAULT 0,
+  impressions          INTEGER DEFAULT 0,
+  clicks               INTEGER DEFAULT 0,
+  cpm                  NUMERIC(10,4) DEFAULT 0,
+  cpc                  NUMERIC(10,4) DEFAULT 0,
+  ctr                  NUMERIC(8,4)  DEFAULT 0,
+  reach                INTEGER DEFAULT 0,
+  date_start           DATE,
+  date_stop            DATE,
+  last_synced_at       TIMESTAMPTZ DEFAULT NOW(),
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_campaigns_facebook_id ON public.campaigns(facebook_campaign_id);
+```
+
+---
+
+## 3. TABELA DE CONJUNTOS DE ANÚNCIOS
+
+```sql
+CREATE TABLE public.ad_sets (
+  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  campaign_id       UUID REFERENCES public.campaigns(id) ON DELETE CASCADE NOT NULL,
+  facebook_adset_id TEXT NOT NULL UNIQUE,
+  adset_name        TEXT NOT NULL,
+  status            TEXT DEFAULT 'ACTIVE',
+  spend             NUMERIC(12,2) DEFAULT 0,
+  impressions       INTEGER DEFAULT 0,
+  clicks            INTEGER DEFAULT 0,
+  cpm               NUMERIC(10,4) DEFAULT 0,
+  cpc               NUMERIC(10,4) DEFAULT 0,
+  reach             INTEGER DEFAULT 0,
+  last_synced_at    TIMESTAMPTZ DEFAULT NOW(),
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_ad_sets_facebook_id  ON public.ad_sets(facebook_adset_id);
+CREATE INDEX idx_ad_sets_campaign_id  ON public.ad_sets(campaign_id);
+```
+
+---
+
+## 4. TABELA DE ANÚNCIOS
+
+`facebook_ad_id` é a chave de cruzamento central com as vendas.
+Configure os anúncios no Facebook com `?utm_content={{ad.id}}` na URL
+de destino para que o valor chegue automaticamente nos webhooks.
+
+```sql
+CREATE TABLE public.ads (
+  id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ad_set_id        UUID REFERENCES public.ad_sets(id) ON DELETE CASCADE NOT NULL,
+  facebook_ad_id   TEXT NOT NULL UNIQUE,  -- chave de cruzamento com sales
+  ad_name          TEXT NOT NULL,
+  status           TEXT DEFAULT 'ACTIVE',
+  spend            NUMERIC(12,2) DEFAULT 0,
+  impressions      INTEGER DEFAULT 0,
+  clicks           INTEGER DEFAULT 0,
+  cpm              NUMERIC(10,4) DEFAULT 0,
+  cpc              NUMERIC(10,4) DEFAULT 0,
+  reach            INTEGER DEFAULT 0,
+  last_synced_at   TIMESTAMPTZ DEFAULT NOW(),
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índice principal: usado pelo trigger de matching em toda inserção de venda
+CREATE INDEX idx_ads_facebook_ad_id ON public.ads(facebook_ad_id);
+```
+
+---
+
+## 5. TABELA DE VENDAS
+
+`ad_id` recebe o valor bruto de `utm_content` que chega no webhook do checkout.
+O trigger `match_sale_to_ad` resolve automaticamente os campos `matched_*`
+subindo a hierarquia: anúncio → conjunto → campanha.
+
+```sql
+CREATE TABLE public.sales (
+  id                  UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  checkout_platform   TEXT NOT NULL
+                        CHECK (checkout_platform IN ('hotmart', 'kiwify', 'kirvano')),
+  transaction_id      TEXT NOT NULL,
+  product_name        TEXT,
+  product_id          TEXT,
+  buyer_name          TEXT,
+  buyer_email         TEXT,
+  amount              NUMERIC(12,2) NOT NULL,
+  currency            TEXT DEFAULT 'BRL',
+  status              TEXT DEFAULT 'approved'
+                        CHECK (status IN ('approved','pending','refunded','cancelled','chargeback')),
+  payment_method      TEXT,
+
+  -- Campos UTM recebidos do checkout
+  utm_source          TEXT,
+  utm_medium          TEXT,
+  utm_campaign        TEXT,
+  utm_content         TEXT,
+  utm_term            TEXT,
+
+  -- Chave de cruzamento central (= facebook_ad_id vindo de utm_content)
+  ad_id               TEXT,
+
+  -- Referências resolvidas automaticamente pelo trigger
+  matched_ad_id       UUID REFERENCES public.ads(id),
+  matched_ad_set_id   UUID REFERENCES public.ad_sets(id),
+  matched_campaign_id UUID REFERENCES public.campaigns(id),
+
+  is_organic          BOOLEAN DEFAULT false,
+  sale_date           TIMESTAMPTZ DEFAULT NOW(),
+  raw_webhook_data    JSONB,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_sales_ad_id            ON public.sales(ad_id);
+CREATE INDEX idx_sales_matched_ad       ON public.sales(matched_ad_id);
+CREATE INDEX idx_sales_matched_adset    ON public.sales(matched_ad_set_id);
+CREATE INDEX idx_sales_matched_campaign ON public.sales(matched_campaign_id);
+CREATE INDEX idx_sales_sale_date        ON public.sales(sale_date);
+```
+
+---
+
+## 6. TABELA DE TAXAS
+
+Taxas e impostos aplicados sobre o faturamento para calcular o líquido.
+
+```sql
+CREATE TABLE public.taxes (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  tax_name   TEXT NOT NULL,
+  tax_type   TEXT NOT NULL CHECK (tax_type IN ('percentage', 'fixed')),
+  tax_value  NUMERIC(10,4) NOT NULL,
+  applies_to TEXT DEFAULT 'revenue' CHECK (applies_to IN ('revenue', 'commission')),
+  is_active  BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## 7. TABELA DE WEBHOOK LOGS (auditoria)
+
+Registra todos os webhooks recebidos para diagnóstico.
+
+```sql
+CREATE TABLE public.webhook_logs (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  platform      TEXT NOT NULL,
+  payload       JSONB NOT NULL,
+  ad_id_raw     TEXT,
+  status        TEXT DEFAULT 'received'
+                  CHECK (status IN ('received', 'processed', 'error')),
+  error_message TEXT,
+  ip_address    INET,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## 8. TRIGGER: UPDATED_AT AUTOMÁTICO
+
+```sql
+CREATE OR REPLACE FUNCTION public.update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_updated_at_settings
+  BEFORE UPDATE ON public.settings
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+CREATE TRIGGER trg_updated_at_campaigns
+  BEFORE UPDATE ON public.campaigns
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+CREATE TRIGGER trg_updated_at_ad_sets
+  BEFORE UPDATE ON public.ad_sets
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+CREATE TRIGGER trg_updated_at_ads
+  BEFORE UPDATE ON public.ads
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+CREATE TRIGGER trg_updated_at_sales
+  BEFORE UPDATE ON public.sales
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+```
+
+---
+
+## 9. TRIGGER: MATCHING CENTRAL (ad_id → hierarquia completa)
+
+Executa BEFORE INSERT em cada venda.
+Lê `ad_id` (ou `utm_content` como fallback), busca na tabela `ads`
+pelo `facebook_ad_id` e sobe a hierarquia para preencher os três
+campos `matched_*` automaticamente.
+
+```sql
+CREATE OR REPLACE FUNCTION public.match_sale_to_ad()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_ad       RECORD;
+  v_adset    RECORD;
+  v_campaign RECORD;
+BEGIN
+  -- Fallback: usa utm_content se ad_id não veio preenchido
+  IF NEW.ad_id IS NULL AND NEW.utm_content IS NOT NULL THEN
+    NEW.ad_id := NEW.utm_content;
+  END IF;
+
+  -- Sem ad_id: venda orgânica
+  IF NEW.ad_id IS NULL OR NEW.ad_id = '' THEN
+    NEW.is_organic := true;
+    RETURN NEW;
+  END IF;
+
+  -- Busca o anúncio pelo facebook_ad_id
+  SELECT id, ad_set_id
+  INTO v_ad
+  FROM public.ads
+  WHERE facebook_ad_id = NEW.ad_id
+  LIMIT 1;
+
+  -- Anúncio não encontrado (sync pendente): salva bruto, marca orgânico
+  IF NOT FOUND THEN
+    NEW.is_organic := true;
+    RETURN NEW;
+  END IF;
+
+  -- Sobe para conjunto
+  SELECT id, campaign_id
+  INTO v_adset
+  FROM public.ad_sets
+  WHERE id = v_ad.ad_set_id
+  LIMIT 1;
+
+  -- Sobe para campanha
+  IF v_adset IS NOT NULL THEN
+    SELECT id
+    INTO v_campaign
+    FROM public.campaigns
+    WHERE id = v_adset.campaign_id
+    LIMIT 1;
+  END IF;
+
+  -- Preenche referências
+  NEW.matched_ad_id       := v_ad.id;
+  NEW.matched_ad_set_id   := v_adset.id;
+  NEW.matched_campaign_id := v_campaign.id;
+  NEW.is_organic          := false;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_sale_insert_match_ad
+  BEFORE INSERT ON public.sales
+  FOR EACH ROW EXECUTE FUNCTION public.match_sale_to_ad();
+```
+
+---
+
+## 10. FUNÇÃO: REMATCH DE VENDAS ANTERIORES
+
+Roda uma única vez após a primeira sincronização com o Facebook,
+para retroagir o matching em vendas que chegaram antes dos anúncios
+estarem cadastrados no banco.
+
+```sql
+CREATE OR REPLACE FUNCTION public.rematch_unmatched_sales()
+RETURNS INTEGER AS $$
+DECLARE
+  v_sale     RECORD;
+  v_ad       RECORD;
+  v_adset    RECORD;
+  v_campaign RECORD;
+  v_count    INTEGER := 0;
+BEGIN
+  FOR v_sale IN
+    SELECT id, ad_id, utm_content
+    FROM public.sales
+    WHERE matched_ad_id IS NULL
+      AND (ad_id IS NOT NULL OR utm_content IS NOT NULL)
+  LOOP
+    SELECT id, ad_set_id INTO v_ad
+    FROM public.ads
+    WHERE facebook_ad_id = COALESCE(v_sale.ad_id, v_sale.utm_content)
+    LIMIT 1;
+
+    IF FOUND THEN
+      SELECT id, campaign_id INTO v_adset
+      FROM public.ad_sets WHERE id = v_ad.ad_set_id LIMIT 1;
+
+      SELECT id INTO v_campaign
+      FROM public.campaigns WHERE id = v_adset.campaign_id LIMIT 1;
+
+      UPDATE public.sales SET
+        matched_ad_id       = v_ad.id,
+        matched_ad_set_id   = v_adset.id,
+        matched_campaign_id = v_campaign.id,
+        is_organic          = false
+      WHERE id = v_sale.id;
+
+      v_count := v_count + 1;
+    END IF;
+  END LOOP;
+
+  RETURN v_count;  -- retorna quantas vendas foram retroativamente vinculadas
+END;
+$$ LANGUAGE plpgsql;
+
+-- Uso: SELECT public.rematch_unmatched_sales();
+```
+
+---
+
+## 11. VIEWS PARA O DASHBOARD
+
+### Performance por anúncio
+
+```sql
+CREATE OR REPLACE VIEW public.v_ad_performance AS
+SELECT
+  a.id                          AS ad_id,
+  a.facebook_ad_id,
+  a.ad_name,
+  a.status,
+  a.spend,
+  a.impressions,
+  a.clicks,
+  a.cpm,
+  a.cpc,
+  COALESCE(s.total_revenue, 0)  AS revenue,
+  COALESCE(s.sale_count, 0)     AS sales,
+  CASE WHEN a.spend > 0
+    THEN ROUND((COALESCE(s.total_revenue, 0) / a.spend)::NUMERIC, 4)
+    ELSE 0 END                  AS roas,
+  CASE WHEN a.spend > 0
+    THEN ROUND(((COALESCE(s.total_revenue, 0) - a.spend) / a.spend * 100)::NUMERIC, 2)
+    ELSE 0 END                  AS roi_pct,
+  CASE WHEN COALESCE(s.sale_count, 0) > 0
+    THEN ROUND((a.spend / s.sale_count)::NUMERIC, 4)
+    ELSE 0 END                  AS cpa,
+  ads_et.id                     AS ad_set_id,
+  ads_et.adset_name,
+  c.id                          AS campaign_id,
+  c.campaign_name
+FROM public.ads a
+LEFT JOIN public.ad_sets  ads_et ON ads_et.id = a.ad_set_id
+LEFT JOIN public.campaigns c     ON c.id = ads_et.campaign_id
+LEFT JOIN (
+  SELECT matched_ad_id,
+         SUM(amount) AS total_revenue,
+         COUNT(*)    AS sale_count
+  FROM public.sales
+  WHERE status = 'approved'
+  GROUP BY matched_ad_id
+) s ON s.matched_ad_id = a.id;
+```
+
+### Performance por campanha
+
+```sql
+CREATE OR REPLACE VIEW public.v_campaign_performance AS
+SELECT
+  c.id                          AS campaign_id,
+  c.facebook_campaign_id,
+  c.campaign_name,
+  c.status,
+  c.spend,
+  c.impressions,
+  c.clicks,
+  c.cpm,
+  c.cpc,
+  COALESCE(s.total_revenue, 0)  AS revenue,
+  COALESCE(s.sale_count, 0)     AS sales,
+  CASE WHEN c.spend > 0
+    THEN ROUND((COALESCE(s.total_revenue, 0) / c.spend)::NUMERIC, 4)
+    ELSE 0 END                  AS roas,
+  CASE WHEN c.spend > 0
+    THEN ROUND(((COALESCE(s.total_revenue, 0) - c.spend) / c.spend * 100)::NUMERIC, 2)
+    ELSE 0 END                  AS roi_pct,
+  CASE WHEN COALESCE(s.sale_count, 0) > 0
+    THEN ROUND((c.spend / s.sale_count)::NUMERIC, 4)
+    ELSE 0 END                  AS cpa
+FROM public.campaigns c
+LEFT JOIN (
+  SELECT matched_campaign_id,
+         SUM(amount) AS total_revenue,
+         COUNT(*)    AS sale_count
+  FROM public.sales
+  WHERE status = 'approved'
+  GROUP BY matched_campaign_id
+) s ON s.matched_campaign_id = c.id;
+```
+
+---
+
+## CHECKLIST PÓS-EXECUÇÃO
+
+- [ ] Criar projeto no supabase.com (externo — NÃO usar o Supabase do Lovable)
+- [ ] Executar todo este SQL no SQL Editor do projeto externo
+- [ ] No Lovable, configurar `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` apontando para o projeto externo
+- [ ] Configurar URLs dos anúncios no Facebook com `?utm_content={{ad.id}}`
+- [ ] Rodar sincronização inicial pelo frontend (aba Configurações → Facebook Ads → Sincronizar agora)
+- [ ] Executar `SELECT public.rematch_unmatched_sales();` após a primeira sync
+- [ ] Confirmar que os webhooks dos checkouts estão enviando `utm_content` corretamente
+- [ ] Guardar a `anon key` do Supabase em variável de ambiente — nunca expor publicamente
